@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.email       = ["lars.gierth@gmail.com"]
   s.homepage    = "https://github.com/lgierth/hatetepe"
   s.summary     = %q{Builds and parses HTTP messages}
-  s.description = %q{Hatetepe combines its own builder with http_parser.rb to make dealing with HTTP as comfortable as possible.}
+  s.description = %q{Hatetepe combines its own builder with http_parser.rb to make dealing with HTTP messages as comfortable as possible.}
 
   s.add_dependency "http_parser.rb"
   

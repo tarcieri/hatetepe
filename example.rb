@@ -1,22 +1,24 @@
-require "hatetepe/parser"
+require "hatetepe"
 
 parser = Hatetepe::Parser.new do |p|
-  p.headers do |headers|; end
-  p.body do |chunk|; end
-  p.error do |exception|; end
-  p.finish do; end
+  p.on_request do |http_method, request_url, http_version|; end
+  p.on_response do |status, http_version|; end
+  p.on_header do |name, value|; end
+  p.on_body_chunk do |chunk|; end
+  p.on_error do |exception|; end
+  p.on_finish do; end
   
   p << "GET / HTTP/1.1\r\n\r\n"
 end
 
 Hatetepe::Builder.new do |b|
-  b.write do |chunk|
+  b.on_write do |chunk|
     $connection.write(chunk)
   end
   
-  b.error {|e| @log.err e.message; raise(e) }
+  b.on_error {|e| @log.err e.message; raise(e) }
   
-  b.finish { $connection.close }
+  b.on_finish { $connection.close }
   
   # build response
   b.status = 200
