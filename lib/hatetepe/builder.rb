@@ -3,6 +3,8 @@ require "hatetepe/status"
 module Hatetepe
   class BuilderError < StandardError; end
   
+  METHODS = ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "TRACE", "PATCH", "CONNECT"]
+  
   class Builder
     def self.build
       message = ""
@@ -38,25 +40,54 @@ module Hatetepe
       end
     end
     
-    def try_build
-      return if building?
-      
-      if http_method && request_url && http_version
-        build
-      elsif status && http_version
-        build
-      end
-    end
-    
     def building?
       !!@building
     end
     
+    def writing_body?
+      !!@writing_body
+    end
+    
     def build
+      return if building?
+      
       @building = true
+      if http_method && request_url
+        write "#{http_method} #{request_url} #{http_version}\r\n"
+      elsif status
+        write "#{http_version} #{status} #{STATUS_CODES[status]}\r\n"
+      else
+        @building = false
+        return
+      end
+      
+      return if headers.empty?
+      headers.each {|name, value| write_header(name, value) }
+      
+      @writing_body = true
+      write "\r\n"
+      return if body.empty?
+      body.each {|chunk| write_body_chunk(chunk) }
+      
+      @building = false
+      @writing_body = false
+      on_finish.each {|f| f.call }
+      
     rescue BuilderError => error
       on_error.each {|e| e.call(error) }
-      raise(error)
+    end
+    
+    def finish
+      unless writing_body?
+        headers.each {|name| write_header(name, value) }
+        write "\r\n"
+        @writing_body = true
+      end
+      
+      
+      
+      headers.each {|name, value| write_header(name, value) } unless writing_body?
+      
     end
     
     def write(chunk)
@@ -65,41 +96,45 @@ module Hatetepe
     
     def status=(status)
       status = Integer(status)
-      raise BuilderError, "Unknown HTTP status: #{status}" unless STATUS_CODES[status]
+      raise BuilderError, "Unknown status: #{status}" unless STATUS_CODES[status]
       @status = status
-      try_build
+      build
     end
     
     def http_method=(http_method)
-      @http_method = String(http_method)
-      try_build
+      http_method = String(http_method).upcase
+      raise BuilderError, "Unknown HTTP method: #{http_method}" unless METHODS.include?(http_method)
+      @http_method = http_method
+      build
     end
     
     def request_url=(request_url)
       @request_url = String(request_url)
-      try_build
+      build
     end
     
     def http_version=(version)
-      @http_version = String(version)
-      @http_version.insert(0, "HTTP/") unless @http_version =~ /^HTTP\//
-      try_build
+      version = String(version)
+      version.insert(0, "HTTP/") unless version =~ /^HTTP\//
+      raise BuilderError, "Unknown HTTP version: #{version}" unless version =~ /^HTTP\/1\.(0|1)$/
+      @http_version = version
+      build
     end
     
     def headers=(headers)
       @headers = headers.respond_to?(:each) ? headers : Array(headers)
-      try_build
+      build
     end
     
     def add_header(name, value)
-      if building?
+      if building? && !writing_body?
         write_header(name, value)
       else
         headers[name] = value
       end
     end
     
-    def write_header(name, value)
+    def write_header(name, value) # :nodoc:
       write "#{name}: #{value}\r\n"
     end
     
@@ -109,18 +144,17 @@ module Hatetepe
     end
     
     def add_body_chunk(chunk)
-      if building?
+      if building? && writing_body?
         write_body_chunk(chunk)
       else
         body << chunk
       end
     end
     
-    def write_body_chunk(chunk)
+    def write_body_chunk(chunk) # :nodoc:
       chunk = String(chunk)
-      headers["Transfer-Encoding"] ||= "chunked" unless headers["Content-Length"]
       
-      if headers["Transfer-Encoding"] == "chunked"
+      if headers["Transfer-Encoding"] && headers["Transfer-Encoding"] == "chunked"
         write "#{chunk.length.to_s(16)}\r\n#{chunk}\r\n"
       else
         write chunk
