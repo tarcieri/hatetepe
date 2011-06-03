@@ -7,7 +7,6 @@ messages as comfortable as possible.
 TODO
 ----
 
-- Does http_parser.rb recognize headers after a chunked body?
-- Some headers may appear multiple times (e.g. Set-Cookie)
+- Does http_parser.rb recognize trailing headers?
+- Support for pausing and resuming parsing/building
 - Encoding support (see https://github.com/tmm1/http_parser.rb/pull/1)
-- Support for stopping parsing/building
