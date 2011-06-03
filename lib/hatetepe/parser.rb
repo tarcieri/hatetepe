@@ -4,7 +4,7 @@ module Hatetepe
   class ParserError < StandardError; end
   
   class Parser
-    def self.parse(data)
+    def self.parse(data = [], &block)
       message = {}
       parser = new do |p|
         p.on_request do |*args|
@@ -24,48 +24,55 @@ module Hatetepe
         end
       end
       
-      yield parser if block_given?
+      if block
+        block.arity == 0 ? parser.instance_eval(&block) : block.call(parser)
+      end
       
-      data = Array(data) unless data.respond_to?(:each)
-      data.each {|chunk| parser << chunk }
+      Array(data).each {|chunk| parser << chunk }
       message
     end
     
-    def initialize
+    attr_reader :bytes_read
+    
+    def initialize(&block)
       @on_request, @on_response, @on_header = [], [], []
       @on_body_chunk, @on_complete, @on_error = [], [], []
       @parser = HTTP::Parser.new
       
-      @parser.on_headers_complete do
+      @parser.on_headers_complete = proc do
         if @parser.http_method
           on_request.each do |r|
-            r.call(@parser.http_method, @parser.request_url, @parser.http_version)
+            r.call(@parser.http_method, @parser.request_url, @parser.http_version.join("."))
           end
         else
           on_response.each do |r|
-            r.call(@parser.status, @parser.http_version)
+            r.call(@parser.status_code, @parser.http_version.join("."))
           end
         end
         
         @parser.headers.each do |header|
-          name, value = header.split(/\s*:\s*/, 1)
-          on_header.each {|h| h.call(name, value) }
+          on_header.each {|h| h.call(*header) }
         end
       end
       
-      @parser.on_body do |chunk|
+      @parser.on_body = proc do |chunk|
         on_body_chunk.each {|b| b.call(chunk) }
       end
       
-      @parser.on_message_complete do
-        on_finish.each {|f| f.call }
+      @parser.on_message_complete = proc do
+        on_complete.each {|f| f.call(bytes_read) }
       end
       
-      yield self if block_given?
+      reset
+      
+      if block
+        block.arity == 0 ? instance_eval(&block) : block.call(self)
+      end
     end
     
     def reset
       @parser.reset!
+      @bytes_read = 0
     end
     
     [:request, :response, :header, :body_chunk, :complete, :error].each do |hook|
@@ -77,6 +84,7 @@ module Hatetepe
     end
     
     def <<(data)
+      @bytes_read += data.length
       @parser << data
     rescue HTTP::Parser::Error => original_error
       error = ParserError.new(original_error.message)

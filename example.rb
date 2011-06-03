@@ -1,28 +1,29 @@
-require "hatetepe"
+require "bundler"
+Bundler.setup
 
-parser = Hatetepe::Parser.new do |p|
-  p.on_request do |http_method, request_url, http_version|; end
-  p.on_response do |status, http_version|; end
-  p.on_header do |name, value|; end
-  p.on_body_chunk do |chunk|; end
-  p.on_error do |exception|; end
-  p.on_complete do; end
+require "hatetepe"
+require "awesome_print"
+
+Hatetepe::Parser.parse do
+  [:request, :response, :header, :body_chunk, :complete, :error].each do |hook|
+    send :"on_#{hook}" do |*args|
+      puts "on_#{hook}: #{args.inspect}"
+    end
+  end
   
-  p << "GET / HTTP/1.1\r\n\r\n"
+  self << "HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHallo Welt!"
 end
 
-Hatetepe::Builder.new do |b|
-  b.on_write {|data| $connection.write(data) }
-  b.on_error {|e| $log.err(e.message) }
+Hatetepe::Builder.build do
+  on_write {|data| p data }
+  on_complete {|bytes_written| puts "Wrote #{bytes_written} bytes" }
+
+  response 200
+  header "Content-Type", "text/html", "utf-8"
+  raw_header "Content-Length: 25"
+  body "<p>Hallo Welt!</p>"
   
-  b.on_complete {|bytes_written| $connection.close }
-  
-  b.response 200
-  b.header "Content-Type", "text/html", "utf-8"
-  b.raw_header "Content-Length: 25"
-  b.body "<p>Hallo Welt!</p>"
-  
-  b.response 201
-  b.header "Location", "/new_entity"
-  b.complete
+  response 201
+  header "Location", "/new_entity"
+  complete
 end

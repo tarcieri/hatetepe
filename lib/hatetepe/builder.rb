@@ -12,9 +12,11 @@ module Hatetepe
       
       block.arity == 0 ? builder.instance_eval(&block) : block.call(builder)
       
-      complete
+      builder.complete
       return message.empty? ? nil : message
     end
+    
+    attr_reader :state, :bytes_written
     
     def initialize(&block)
       reset
@@ -40,19 +42,19 @@ module Hatetepe
     end
     
     def ready?
-      @state == :ready
+      state == :ready
     end
     
     def writing_headers?
-      @state == :writing_headers
+      state == :writing_headers
     end
     
     def writing_body?
-      @state == :writing_body
+      state == :writing_body
     end
     
     def writing_trailing_headers?
-      @state == :writing_trailing_headers
+      state == :writing_trailing_headers
     end
     
     def chunked?
@@ -71,9 +73,15 @@ module Hatetepe
         error "Unknown status code: #{code}"
       end
       write "HTTP/#{version} #{code} #{status}\r\n"
+      @state = :writing_headers
     end
     
     def header(name, value, charset = nil)
+      charset = charset ? "; charset=#{charset}" : ""
+      raw_header "#{name}: #{value}#{charset}"
+    end
+    
+    def raw_header(header)
       if ready?
         error "A request or response line is required before writing headers"
       elsif writing_body?
@@ -82,12 +90,11 @@ module Hatetepe
         @state = :writing_trailing_headers
       end
       
-      if name == "Content-Length"
+      if header[0..13] == "Content-Length"
         @chunked = false
       end
       
-      charset = charset ? "; charset=#{charset}" : ""
-      write "#{name}: #{value}#{charset}\r\n"
+      write "#{header}\r\n"
     end
     
     def body(chunk)
@@ -116,7 +123,7 @@ module Hatetepe
         write "\r\n"
       end
       
-      on_complete.each {|blk| blk.call(@bytes_written) }
+      on_complete.each {|blk| blk.call(bytes_written) }
       reset
     end
     
