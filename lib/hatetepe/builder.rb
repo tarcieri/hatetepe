@@ -3,36 +3,35 @@ require "hatetepe/status"
 module Hatetepe
   class BuilderError < StandardError; end
   
-  METHODS = ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "TRACE", "PATCH", "CONNECT"]
-  
   class Builder
-    def self.build
+    def self.build(&block)
       message = ""
       builder = new do |b|
-        b.on_write {|chunk| message << chunk }
+        b.on_write {|data| message << data }
       end
       
-      yield builder if block_given?
-      message
+      block.arity == 0 ? builder.instance_eval(&block) : block.call(builder)
+      
+      complete
+      return message.empty? ? nil : message
     end
     
-    attr_reader :status, :http_method, :request_url, :http_version, :headers, :body
-    
-    def initialize
-      @on_write, @on_finish, @on_error = [], [], []
-      
+    def initialize(&block)
       reset
+      @on_write, @on_complete, @on_error = [], [], []
       
-      yield self if block_given?
+      if block
+        block.arity == 0 ? instance_eval(&block) : block.call(self)
+      end
     end
     
     def reset
-      @http_method, @status, @request_url = nil
-      @http_version = "1.1"
-      @headers = [], @body = []
+      @state = :ready
+      @chunked = true
+      @bytes_written = 0
     end
     
-    [:write, :finish, :error].each do |hook|
+    [:write, :complete, :error].each do |hook|
       define_method :"on_#{hook}" do |&block|
         store = instance_variable_get(:"@on_#{hook}")
         return store unless block
@@ -40,125 +39,97 @@ module Hatetepe
       end
     end
     
-    def building?
-      !!@building
+    def ready?
+      @state == :ready
+    end
+    
+    def writing_headers?
+      @state == :writing_headers
     end
     
     def writing_body?
-      !!@writing_body
+      @state == :writing_body
     end
     
-    def build
-      return if building?
-      
-      @building = true
-      if http_method && request_url
-        write "#{http_method} #{request_url} #{http_version}\r\n"
-      elsif status
-        write "#{http_version} #{status} #{STATUS_CODES[status]}\r\n"
-      else
-        @building = false
-        return
+    def writing_trailing_headers?
+      @state == :writing_trailing_headers
+    end
+    
+    def chunked?
+      @chunked
+    end
+    
+    def request(verb, uri, version = "1.1")
+      complete unless ready?
+      write "#{verb.upcase} #{uri} HTTP/#{version}\r\n"
+      @state = :writing_headers
+    end
+    
+    def response(code, version = "1.1")
+      complete unless ready?
+      unless status = STATUS_CODES[code]
+        error "Unknown status code: #{code}"
+      end
+      write "HTTP/#{version} #{code} #{status}\r\n"
+    end
+    
+    def header(name, value, charset = nil)
+      if ready?
+        error "A request or response line is required before writing headers"
+      elsif writing_body?
+        error "Trailing headers require chunked transfer encoding" unless chunked?
+        write "0\r\n"
+        @state = :writing_trailing_headers
       end
       
-      return if headers.empty?
-      headers.each {|name, value| write_header(name, value) }
+      if name == "Content-Length"
+        @chunked = false
+      end
       
-      @writing_body = true
-      write "\r\n"
-      return if body.empty?
-      body.each {|chunk| write_body_chunk(chunk) }
-      
-      @building = false
-      @writing_body = false
-      on_finish.each {|f| f.call }
-      
-    rescue BuilderError => error
-      on_error.each {|e| e.call(error) }
+      charset = charset ? "; charset=#{charset}" : ""
+      write "#{name}: #{value}#{charset}\r\n"
     end
     
-    def finish
-      unless writing_body?
-        headers.each {|name| write_header(name, value) }
+    def body(chunk)
+      if ready?
+        error "A request or response line and headers are required before writing body"
+      elsif writing_trailing_headers?
+        error "Cannot write body after trailing headers"
+      elsif writing_headers?
         write "\r\n"
-        @writing_body = true
+        @state = :writing_body
       end
       
-      
-      
-      headers.each {|name, value| write_header(name, value) } unless writing_body?
-      
-    end
-    
-    def write(chunk)
-      on_write.each {|w| w.call(chunk) }
-    end
-    
-    def status=(status)
-      status = Integer(status)
-      raise BuilderError, "Unknown status: #{status}" unless STATUS_CODES[status]
-      @status = status
-      build
-    end
-    
-    def http_method=(http_method)
-      http_method = String(http_method).upcase
-      raise BuilderError, "Unknown HTTP method: #{http_method}" unless METHODS.include?(http_method)
-      @http_method = http_method
-      build
-    end
-    
-    def request_url=(request_url)
-      @request_url = String(request_url)
-      build
-    end
-    
-    def http_version=(version)
-      version = String(version)
-      version.insert(0, "HTTP/") unless version =~ /^HTTP\//
-      raise BuilderError, "Unknown HTTP version: #{version}" unless version =~ /^HTTP\/1\.(0|1)$/
-      @http_version = version
-      build
-    end
-    
-    def headers=(headers)
-      @headers = headers.respond_to?(:each) ? headers : Array(headers)
-      build
-    end
-    
-    def add_header(name, value)
-      if building? && !writing_body?
-        write_header(name, value)
-      else
-        headers[name] = value
-      end
-    end
-    
-    def write_header(name, value) # :nodoc:
-      write "#{name}: #{value}\r\n"
-    end
-    
-    def body=(body)
-      @body = body.respond_to?(:each) ? body : Array(body)
-      try_build
-    end
-    
-    def add_body_chunk(chunk)
-      if building? && writing_body?
-        write_body_chunk(chunk)
-      else
-        body << chunk
-      end
-    end
-    
-    def write_body_chunk(chunk) # :nodoc:
-      chunk = String(chunk)
-      
-      if headers["Transfer-Encoding"] && headers["Transfer-Encoding"] == "chunked"
+      if chunked?
         write "#{chunk.length.to_s(16)}\r\n#{chunk}\r\n"
       else
         write chunk
       end
+    end
+    
+    def complete
+      return if ready?
+      
+      if writing_body? && chunked?
+        write "0\r\n\r\n"
+      elsif writing_headers? || writing_trailing_headers?
+        write "\r\n"
+      end
+      
+      on_complete.each {|blk| blk.call(@bytes_written) }
+      reset
+    end
+    
+    def write(chunk)
+      @bytes_written += chunk.length
+      on_write.each {|blk| blk.call(chunk) }
+    end
+    
+    def error(message)
+      exception = BuilderError.new(message)
+      exception.set_backtrace(caller[1..-1])
+      on_error.each {|blk| blk.call(exception) }
+      raise(exception)
     end
   end
 end

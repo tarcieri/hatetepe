@@ -6,35 +6,23 @@ parser = Hatetepe::Parser.new do |p|
   p.on_header do |name, value|; end
   p.on_body_chunk do |chunk|; end
   p.on_error do |exception|; end
-  p.on_finish do; end
+  p.on_complete do; end
   
   p << "GET / HTTP/1.1\r\n\r\n"
 end
 
 Hatetepe::Builder.new do |b|
-  b.on_write do |chunk|
-    $connection.write(chunk)
-  end
+  b.on_write {|data| $connection.write(data) }
+  b.on_error {|e| $log.err(e.message) }
   
-  b.on_error {|e| @log.err e.message; raise(e) }
+  b.on_complete {|bytes_written| $connection.close }
   
-  b.on_finish { $connection.close }
+  b.response 200
+  b.header "Content-Type", "text/html", "utf-8"
+  b.raw_header "Content-Length: 25"
+  b.body "<p>Hallo Welt!</p>"
   
-  # build response
-  b.status = 200
-  b.headers = {"Content-Type" => "text/html"}
-  b.http_version = "1.1"
-  
-  # append body
-  b.body = "Foo Bar!"
-  b.body = ["Hallo"]
-  b.body << chunk
-  b.body.close
-  
-  # build request
-  b.request_url = "/asdf"
-  b.headers = {}
-  b.http_method = "PUT"
-  b.http_version = "1.1"
-  b.body << chunk
+  b.response 201
+  b.header "Location", "/new_entity"
+  b.complete
 end

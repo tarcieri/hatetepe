@@ -33,7 +33,7 @@ module Hatetepe
     
     def initialize
       @on_request, @on_response, @on_header = [], [], []
-      @on_body_chunk, @on_finish, @on_error = [], [], []
+      @on_body_chunk, @on_complete, @on_error = [], [], []
       @parser = HTTP::Parser.new
       
       @parser.on_headers_complete do
@@ -68,7 +68,7 @@ module Hatetepe
       @parser.reset!
     end
     
-    [:request, :response, :header, :body_chunk, :finish, :error].each do |hook|
+    [:request, :response, :header, :body_chunk, :complete, :error].each do |hook|
       define_method :"on_#{hook}" do |&block|
         store = instance_variable_get(:"@on_#{hook}")
         return store unless block
