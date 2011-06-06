@@ -35,7 +35,8 @@ module Hatetepe
     attr_reader :bytes_read
     
     def initialize(&block)
-      @on_request, @on_response, @on_header = [], [], []
+      @on_request, @on_response = [], []
+      @on_header, @on_headers_complete = [], []
       @on_body_chunk, @on_complete, @on_error = [], [], []
       @parser = HTTP::Parser.new
       
@@ -53,6 +54,8 @@ module Hatetepe
         @parser.headers.each do |header|
           on_header.each {|h| h.call(*header) }
         end
+        
+        on_headers_complete.each {|hc| hc.call }
       end
       
       @parser.on_body = proc do |chunk|
@@ -75,7 +78,8 @@ module Hatetepe
       @bytes_read = 0
     end
     
-    [:request, :response, :header, :body_chunk, :complete, :error].each do |hook|
+    [:request, :response, :header, :headers_complete,
+     :body_chunk, :complete, :error].each do |hook|
       define_method :"on_#{hook}" do |&block|
         store = instance_variable_get(:"@on_#{hook}")
         return store unless block
