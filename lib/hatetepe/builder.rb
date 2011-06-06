@@ -111,6 +111,7 @@ module Hatetepe
       elsif writing_trailing_headers?
         error "Cannot write body after trailing headers"
       elsif writing_headers?
+        header "Transfer-Encoding", "chunked" if chunked?
         write "\r\n"
         @state = :writing_body
       end
