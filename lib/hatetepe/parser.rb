@@ -93,8 +93,11 @@ module Hatetepe
     rescue HTTP::Parser::Error => original_error
       error = ParserError.new(original_error.message)
       error.set_backtrace(original_error.backtrace)
-      on_error.each {|e| e.call(error) }
-      raise(error)
+      unless on_error.empty?
+        on_error.each {|e| e.call(error) }
+      else
+        raise(error)
+      end
     end
   end
 end

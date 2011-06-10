@@ -144,8 +144,11 @@ module Hatetepe
     def error(message)
       exception = BuilderError.new(message)
       exception.set_backtrace(caller[1..-1])
-      on_error.each {|blk| blk.call(exception) }
-      raise(exception)
+      unless on_error.empty?
+        on_error.each {|blk| blk.call(exception) }
+      else
+        raise(exception)
+      end
     end
   end
 end
