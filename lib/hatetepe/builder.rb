@@ -71,8 +71,10 @@ module Hatetepe
       if Array === code
         response(code[0])
         code[1].each_pair {|name, value| header(name, value) }
-        code[2].each {|chunk| body(chunk) }
-        complete
+        if code[2]
+          code[2].each {|chunk| body(chunk) }
+          complete
+        end
         return
       end
       
