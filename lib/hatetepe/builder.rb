@@ -129,7 +129,7 @@ module Hatetepe
       return if ready?
       
       if writing_body? && chunked?
-        write "0\r\n\r\n"
+        write "0\r\n"
       elsif writing_headers? || writing_trailing_headers?
         write "\r\n"
       end
