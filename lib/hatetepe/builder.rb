@@ -16,7 +16,7 @@ module Hatetepe
       return message.empty? ? nil : message
     end
     
-    attr_reader :state, :bytes_written
+    attr_reader :state
     
     def initialize(&block)
       reset
@@ -30,7 +30,6 @@ module Hatetepe
     def reset
       @state = :ready
       @chunked = true
-      @bytes_written = 0
     end
     
     [:write, :complete, :error].each do |hook|
@@ -134,12 +133,11 @@ module Hatetepe
         write "\r\n"
       end
       
-      on_complete.each {|blk| blk.call(bytes_written) }
+      on_complete.each {|blk| blk.call }
       reset
     end
     
     def write(chunk)
-      @bytes_written += chunk.length
       on_write.each {|blk| blk.call(chunk) }
     end
     
