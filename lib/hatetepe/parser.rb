@@ -32,8 +32,6 @@ module Hatetepe
       message
     end
     
-    attr_reader :bytes_read
-    
     def initialize(&block)
       @on_request, @on_response = [], []
       @on_header, @on_headers_complete = [], []
@@ -63,7 +61,7 @@ module Hatetepe
       end
       
       @parser.on_message_complete = proc do
-        on_complete.each {|f| f.call(bytes_read) }
+        on_complete.each {|f| f.call }
       end
       
       reset
@@ -75,7 +73,6 @@ module Hatetepe
     
     def reset
       @parser.reset!
-      @bytes_read = 0
     end
     
     [:request, :response, :header, :headers_complete,
@@ -88,7 +85,6 @@ module Hatetepe
     end
     
     def <<(data)
-      @bytes_read += data.length
       @parser << data
     rescue HTTP::Parser::Error => original_error
       error = ParserError.new(original_error.message)
