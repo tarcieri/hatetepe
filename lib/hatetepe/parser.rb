@@ -28,7 +28,7 @@ module Hatetepe
         block.arity == 0 ? parser.instance_eval(&block) : block.call(parser)
       end
       
-      Array(data).each {|chunk| parser << chunk }
+      Array(data).each {|chunk| parser << String(chunk) }
       message
     end
     
