@@ -9,12 +9,16 @@ Gem::Specification.new do |s|
   s.authors     = ["Lars Gierth"]
   s.email       = ["lars.gierth@gmail.com"]
   s.homepage    = "https://github.com/lgierth/hatetepe"
-  s.summary     = %q{Builds and parses HTTP messages}
-  s.description = %q{Hatetepe combines its own builder with http_parser.rb to make dealing with HTTP messages as comfortable as possible.}
+  s.summary     = %q{The HTTP toolkit}
+  #s.description = %q{TODO: write description}
 
   s.add_dependency "http_parser.rb"
+  s.add_dependency "eventmachine"
+  s.add_dependency "em-synchrony"
+  s.add_dependency "rack"
+  s.add_dependency "async-rack"
   
-  s.add_development_dependency "test-unit"
+  s.add_development_dependency "rspec"
 
   s.files         = `git ls-files`.split("\n") - [".gitignore"]
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")

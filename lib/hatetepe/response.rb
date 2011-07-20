@@ -1,0 +1,1 @@
+require "hatetepe/message"
