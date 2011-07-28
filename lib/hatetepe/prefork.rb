@@ -9,5 +9,3 @@ module Hatetepe
     end
   end
 end
-
-Prefork.run EM.start_server("tmp/hatetepe.sock", Server)

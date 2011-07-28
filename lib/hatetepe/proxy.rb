@@ -1,9 +1,41 @@
 require "eventmachine"
+require "uri"
 
 require "hatetepe/client"
 
 module Hatetepe
   class Proxy
+    attr_reader :app, :env
+    
+    def initialize(app)
+      @app = app
+    end
+    
+    def call(env)
+      @env = env
+      env["proxy.start"] = method(:start)
+      
+      app.call env
+    end
+    
+    def start(target)
+      uri = build_uri(target)
+      
+      env.delete "proxy.start"
+      env["proxy.callback"] ||= method(:callback)
+      
+      response = Client.request(verb, uri, headers)
+      env["proxy.callback"].call @response, env
+    end
+    
+    def callback(response, env)
+      response
+    end
+  end
+end
+
+module Hatetepe
+  class OldProxy
     attr_reader :env, :target
     
     def initialize(env, target)

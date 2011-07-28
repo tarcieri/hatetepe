@@ -1,3 +1,8 @@
+require "async-rack"
+require "rack"
+
+Rack::STREAMING = "Rack::STREAMING"
+
 module Hatetepe
   class App
     attr_reader :app

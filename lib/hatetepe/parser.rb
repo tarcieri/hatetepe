@@ -1,9 +1,83 @@
 require "http/parser"
 
+require "hatetepe/events"
+require "hatetepe/request"
+require "hatetepe/response"
+
 module Hatetepe
   class ParserError < StandardError; end
   
   class Parser
+    include Events
+    
+    events :reset
+    events :request, :response
+    events :header, :headers_complete
+    events :body, :body_chunk, :body_complete
+    events :trailing_header, :trailing_headers_complete
+    events :complete
+    
+    attr_reader :message
+    attr_reader :verb, :uri, :status, :http_method
+    attr_reader :headers, :body, :trailing_headers
+    
+    def initialize(&block)
+      @parser = HTTP::Parser.new.tap {|p|
+        p.on_headers_complete = proc {
+          version = p.http_version.join(".")
+          if p.http_method
+            @message = Request.new(p.http_method, p.request_url, version)
+            event! :request, message
+          else
+            @message = Response.new(p.status_code, version)
+            event! :response, message
+          end
+          
+          p.headers.each {|key, value|
+            message.headers[key] = value
+            event :header, key, value
+          }
+          event! :headers_complete
+          
+          event! :body, message.body
+          nil
+        }
+        
+        p.on_body = proc {|chunk|
+          message.body << chunk unless message.body.write_closed?
+          event :body_chunk, chunk
+        }
+        
+        p.on_message_complete = proc {
+          message.body.close_write
+          message.body.rewind
+          event! :body_complete
+          
+          event! :complete
+        }
+      }
+      
+      reset
+      
+      if block
+        block.arity != 0 ? block.call(self) : instance_eval(&block)
+      end
+    end
+    
+    def reset
+      @parser.reset!
+      event! :reset
+      @message = nil
+    end
+    
+    def <<(data)
+      @parser << data
+    rescue HTTP::Parser::Error => e
+      raise Hatetepe::ParserError, e.message, e.backtrace
+    end
+  end
+  
+  class OldParser
     def self.parse(data = [], &block)
       message = {}
       parser = new do |p|

@@ -129,6 +129,7 @@ module Hatetepe
       
       if writing_body? && chunked?
         write "0\r\n"
+        write "\r\n"
       elsif writing_headers? || writing_trailing_headers?
         write "\r\n"
       end
