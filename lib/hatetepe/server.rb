@@ -36,7 +36,7 @@ module Hatetepe
       @parser, @builder = Parser.new, Builder.new
       
       @parser.on_request &requests.method(:<<)
-      @parser.on_headers_complete &method(:process)
+      @parser.on_headers &method(:process)
 
       @builder.on_write &method(:send_data)
       #@builder.on_write {|data| puts data; send_data(data) }
@@ -49,7 +49,7 @@ module Hatetepe
       close_connection
     end
     
-    def process
+    def process(*)
       previous, request = requests.values_at(-2, -1)
       
       env = request.to_hash.tap {|e|

@@ -9,5 +9,9 @@ module Hatetepe
     def sync
       EM::Synchrony.sync self
     end
+    
+    def empty?
+      length == 0
+    end
   end
 end

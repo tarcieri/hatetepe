@@ -74,7 +74,13 @@ describe Hatetepe::Parser do
   }
   
   let(:do_request) {
-    parser << "GET / HTTP/1.1\r\n"
+    parser << "POST / HTTP/1.1\r\n"
+    parser << "Transfer-Encoding: chunked\r\n"
+    parser << "Bar: baz\r\n"
+    parser << "\r\n"
+    parser << "6\r\n"
+    parser << "Hello!\r\n"
+    parser << "0\r\n"
     parser << "\r\n"
   }
   
@@ -88,7 +94,7 @@ describe Hatetepe::Parser do
       block.should_receive(:call) {|request|
         request.should equal(parser.message)
         
-        request.verb.should == "GET"
+        request.verb.should == "POST"
         request.uri.should == "/"
         request.http_version.should == "1.1"
         request.headers.should be_empty
@@ -128,6 +134,75 @@ describe Hatetepe::Parser do
       
       parser.on_response &block
       do_response
+    end
+  end
+  
+  context "#on_headers {|headers| ... }" do
+    it "evals the block when the headers are complete" do
+      block.should_receive(:call) {|headers|
+        headers.should equal(parser.message.headers)
+        
+        headers["Transfer-Encoding"].should == "chunked"
+        headers["Bar"].should == "baz"
+      }
+      
+      parser.on_headers &block
+      do_request
+    end
+    
+    it "changes the state to :headers" do
+      block.should_receive(:call) {
+        parser.headers?.should be_true
+      }
+      
+      parser.on_headers &block
+      do_request
+    end
+  end
+  
+  context "#on_body {|body| ... }" do
+    it "evals the block when the body starts" do
+      block.should_receive(:call) {|body|
+        body.should equal(parser.message.body)
+        
+        body.should be_empty
+      }
+      
+      parser.on_body &block
+      do_request
+      
+      parser.message.body.length.should == 6
+      parser.message.body.read.should == "Hello!"
+    end
+    
+    it "changes the state to :body" do
+      block.should_receive(:call) {
+        parser.body?.should be_true
+      }
+      
+      parser.on_body &block
+      do_request
+    end
+  end
+  
+  context "#on_complete { ... }" do
+    it "evals the block when the message is completely parsed" do
+      block.should_receive(:call) {
+        parser.message.body.closed_write?.should be_true
+        parser.message.body.pos.should be_zero
+      }
+      
+      parser.on_complete &block
+      do_request
+    end
+    
+    it "changes the state to :complete" do
+      block.should_receive(:call) {
+        parser.complete?.should be_true
+      }
+      
+      parser.on_complete &block
+      do_request
     end
   end
 end

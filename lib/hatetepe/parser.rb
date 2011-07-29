@@ -12,8 +12,7 @@ module Hatetepe
     
     event :reset
     event :request, :response
-    event :headers_complete
-    event :body, :body_chunk, :body_complete
+    event :headers, :body
     event :trailing_header, :trailing_headers_complete
     event :complete
     
@@ -32,21 +31,19 @@ module Hatetepe
           end
           
           message.headers = p.headers
-          event! :headers_complete
+          event! :headers, message.headers
           
           event! :body, message.body
           nil
         }
         
         p.on_body = proc {|chunk|
-          message.body << chunk unless message.body.write_closed?
-          event :body_chunk, chunk
+          message.body << chunk unless message.body.closed_write?
         }
         
         p.on_message_complete = proc {
           message.body.close_write
           message.body.rewind
-          event! :body_complete
           
           event! :complete
         }
