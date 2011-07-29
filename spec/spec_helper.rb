@@ -1,1 +1,3 @@
-require "awesome_print"
+begin
+  require "awesome_print"
+rescue LoadError; end

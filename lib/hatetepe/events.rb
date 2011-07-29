@@ -26,9 +26,7 @@ module Hatetepe
           store << block
         }
         
-        define_method(:"#{name}?") {
-          instance_variable_get(:@state) == name
-        }
+        define_method(:"#{name}?") { state == name }
         
         more_names.each {|n| event n }
       end
