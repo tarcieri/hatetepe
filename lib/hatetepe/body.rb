@@ -12,11 +12,6 @@ module Hatetepe
     def initialize(string = "")
       @receivers = []
       @io = StringIO.new(string)
-      
-      callback {
-        rewind
-        close_write unless closed_write?
-      }
     end
     
     def sync
@@ -58,7 +53,7 @@ module Hatetepe
     end
     
     def read(length = nil, buffer = nil)
-      sync
+      sync && rewind
       if buffer.nil?
         @io.read length
       else
@@ -67,7 +62,7 @@ module Hatetepe
     end
     
     def gets
-      sync
+      sync && rewind
       @io.gets
     end
     

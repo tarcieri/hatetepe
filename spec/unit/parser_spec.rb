@@ -171,8 +171,11 @@ describe Hatetepe::Parser do
       parser.on_body &block
       do_request
       
-      parser.message.body.length.should == 6
-      parser.message.body.read.should == "Hello!"
+      parser.message.body.tap {|b|
+        b.rewind
+        b.length.should == 6
+        b.read.should == "Hello!"
+      }
     end
     
     it "changes the state to :body" do
@@ -204,7 +207,7 @@ describe Hatetepe::Parser do
     
     it "finishes the body" do
       parser.on_body {|body|
-        body.should_receive :succeed
+        body.should_receive :close_write
       }
       do_request
     end
