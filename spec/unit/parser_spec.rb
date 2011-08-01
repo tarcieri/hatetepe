@@ -187,10 +187,7 @@ describe Hatetepe::Parser do
   
   context "#on_complete { ... }" do
     it "evals the block when the message is completely parsed" do
-      block.should_receive(:call) {
-        parser.message.body.closed_write?.should be_true
-        parser.message.body.pos.should be_zero
-      }
+      block.should_receive(:call)
       
       parser.on_complete &block
       do_request
@@ -202,6 +199,13 @@ describe Hatetepe::Parser do
       }
       
       parser.on_complete &block
+      do_request
+    end
+    
+    it "finishes the body" do
+      parser.on_body {|body|
+        body.should_receive :succeed
+      }
       do_request
     end
   end

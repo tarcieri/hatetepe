@@ -42,9 +42,7 @@ module Hatetepe
         }
         
         p.on_message_complete = proc {
-          message.body.close_write
-          message.body.rewind
-          
+          message.body.succeed
           event! :complete
         }
       }
