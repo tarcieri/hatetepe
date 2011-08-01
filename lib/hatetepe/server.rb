@@ -54,6 +54,7 @@ module Hatetepe
       
       env = request.to_hash.tap {|e|
         e["hatetepe.connection"] = self
+        e["rack.input"].source = self
         
         e["stream.start"] = proc {|response|
           previous.sync if previous

@@ -12,7 +12,10 @@ module Hatetepe
     end
     
     def to_hash
-      {"hatetepe.request" => self}.tap {|hash|
+      {
+        "hatetepe.request" => self,
+        "rack.input" => body
+      }.tap {|hash|
         headers.each {|key, value|
           hash["HTTP_#{key.upcase.gsub(/[^A-Z_]/, "_")}"] = value
         }

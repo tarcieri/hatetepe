@@ -1,6 +1,7 @@
 require "bundler"
 Bundler.setup :default
 
+require "awesome_print"
 require "hatetepe/server"
 
 EM.synchrony {
@@ -11,7 +12,7 @@ EM.synchrony {
   
   Hatetepe::Server.start({
     :app => proc {|env|
-      [200, {"Content-Type" => "text/html"}, ["Hallo Welt!"]]
+      [200, {"Content-Type" => "text/plain"}, [env["rack.input"].read]]
     },
     :host => "127.0.0.1",
     :port => 3000
