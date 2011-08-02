@@ -39,11 +39,9 @@ module Hatetepe
       @parser.on_headers &method(:process)
 
       @builder.on_write &method(:send_data)
-      #@builder.on_write {|data| puts data; send_data(data) }
     end
     
     def receive_data(data)
-      #puts data
       @parser << data
     rescue ParserError
       close_connection

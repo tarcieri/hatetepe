@@ -20,6 +20,7 @@ module Hatetepe
     end
     
     def length
+      # TODO maybe I want to #sync here
       @io.length
     end
     
@@ -48,21 +49,17 @@ module Hatetepe
       @receivers << block
       block.call @io.string unless @io.string.empty?
       sync
-    ensure
-      @receivers.delete block
     end
     
-    def read(length = nil, buffer = nil)
-      sync && rewind
-      if buffer.nil?
-        @io.read length
-      else
-        @io.read length, buffer
-      end
+    def read(*args)
+      sync
+      rewind
+      @io.read *args
     end
     
     def gets
-      sync && rewind
+      sync
+      rewind
       @io.gets
     end
     
