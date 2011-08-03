@@ -6,15 +6,13 @@ require "hatetepe/app"
 require "hatetepe/builder"
 require "hatetepe/connection"
 require "hatetepe/parser"
-require "hatetepe/prefork"
-require "hatetepe/proxy"
 require "hatetepe/request"
 
 module Hatetepe
   class Server < Connection
     def self.start(config)
       server = EM.start_server(config[:host], config[:port], self, config)
-      Prefork.run server if config[:prefork]
+      #Prefork.run server if config[:prefork]
     end
     
     attr_reader :app, :log, :requests
@@ -22,7 +20,7 @@ module Hatetepe
     def initialize(config)
       @app = Rack::Builder.app {
         use Hatetepe::App
-        use Hatetepe::Proxy
+        #use Hatetepe::Proxy
         run config[:app]
       }
       @log = config[:log]
