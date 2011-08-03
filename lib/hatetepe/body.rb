@@ -37,8 +37,9 @@ module Hatetepe
     end
     
     def close_write
-      @io.close_write
+      ret = @io.close_write
       succeed
+      ret
     end
     
     def closed_write?
@@ -47,7 +48,7 @@ module Hatetepe
     
     def each(&block)
       @receivers << block
-      block.call @io.string unless @io.string.empty?
+      block.call @io.string.dup unless @io.string.empty?
       sync
     end
     
@@ -64,13 +65,15 @@ module Hatetepe
     end
     
     def write(chunk)
-      @io.write chunk
+      ret = @io.write chunk
       @receivers.each {|r| r.call chunk }
+      ret
     end
     
     def <<(chunk)
-      @io << chunk
+      ret = @io << chunk
       @receivers.each {|r| r.call chunk }
+      ret
     end
   end
 end
