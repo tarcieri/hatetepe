@@ -15,7 +15,7 @@ module Hatetepe
       env["async.callback"] = proc {|response|
         postprocess env, response
       }
-      env["async.callback"].call app.call(env)
+      postprocess env, app.call(env)
     end
     
     def postprocess(env, response)
