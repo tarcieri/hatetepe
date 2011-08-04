@@ -4,43 +4,42 @@ require "rack"
 
 require "hatetepe/app"
 require "hatetepe/builder"
-require "hatetepe/connection"
 require "hatetepe/parser"
 require "hatetepe/request"
 
 module Hatetepe
-  class Server < Connection
+  class Server < EM::Connection
     def self.start(config)
       server = EM.start_server(config[:host], config[:port], self, config)
       #Prefork.run server if config[:prefork]
     end
     
-    attr_reader :app, :log, :requests
+    attr_reader :app, :log
+    attr_reader :requests, :parser, :builder
     
     def initialize(config)
-      @app = Rack::Builder.app {
-        use Hatetepe::App
-        #use Hatetepe::Proxy
-        run config[:app]
+      @app = Rack::Builder.new.tap {|b|
+        b.use Hatetepe::App
+        #b.use Hatetepe::Proxy
+        b.run config[:app]
       }
       @log = config[:log]
 
       super
-      set_comm_inactivity_timeout config[:timeout] || 30
     end
     
     def post_init
       @requests = []
       @parser, @builder = Parser.new, Builder.new
       
-      @parser.on_request &requests.method(:<<)
-      @parser.on_headers &method(:process)
+      parser.on_request << requests.method(:<<)
+      parser.on_headers << method(:process)
 
-      @builder.on_write &method(:send_data)
+      builder.on_write << method(:send_data)
     end
     
     def receive_data(data)
-      @parser << data
+      parser << data
     rescue ParserError
       close_connection
     end
@@ -53,15 +52,15 @@ module Hatetepe
         e["rack.input"].source = self
         
         e["stream.start"] = proc {|response|
-          previous.sync if previous
+          EM::Synchrony.sync previous if previous
           response[1]["Server"] = "hatetepe/#{VERSION}"
-          @builder.response response[0..1]
+          builder.response response[0..1]
         }
         
-        e["stream.send"] = @builder.method(:body)
+        e["stream.send"] = builder.method(:body)
         
         e["stream.close"] = proc {
-          @builder.complete
+          builder.complete
           requests.delete request
           request.succeed
           
