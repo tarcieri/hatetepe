@@ -1,6 +1,3 @@
-require "bundler"
-Bundler.setup :default
-
 require "awesome_print"
 require "hatetepe/server"
 
