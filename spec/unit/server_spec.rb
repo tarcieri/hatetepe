@@ -18,8 +18,8 @@ describe Hatetepe::Server do
   
   let(:app) { stub "app" }
   let(:log) { stub "log" }
-  let(:host) { stub "host" }
-  let(:port) { stub "port" }
+  let(:host) { "127.0.4.1" }
+  let(:port) { 8081 }
   let(:config) {
     {
       :app => app,
@@ -98,6 +98,10 @@ describe Hatetepe::Server do
         e.should equal(env)
         e["hatetepe.connection"].should equal(server)
         e["rack.input"].source.should equal(server)
+        e["SERVER_NAME"].should == host
+        e["SERVER_NAME"].should_not equal(host)
+        e["SERVER_PORT"].should == String(port)
+        e["HTTP_HOST"].should == "#{host}:#{port}"
         [-1]
       }
       server.process

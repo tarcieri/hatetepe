@@ -14,7 +14,7 @@ module Hatetepe
       #Prefork.run server if config[:prefork]
     end
     
-    attr_reader :app, :log
+    attr_reader :app, :log, :config
     attr_reader :requests, :parser, :builder
     
     def initialize(config)
@@ -25,6 +25,7 @@ module Hatetepe
       }
       @log = config[:log]
 
+      @config = config
       super
     end
     
@@ -50,6 +51,13 @@ module Hatetepe
       env = request.to_hash.tap {|e|
         e["hatetepe.connection"] = self
         e["rack.input"].source = self
+        
+        e["SERVER_NAME"] = config[:host].dup
+        e["SERVER_PORT"] = String(config[:port])
+        
+        host = e["HTTP_HOST"] || config[:host].dup
+        host += ":#{config[:port]}" unless host.include? ":"
+        e["HTTP_HOST"] = host
         
         e["stream.start"] = proc {|response|
           EM::Synchrony.sync previous if previous

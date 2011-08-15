@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+require "hatetepe/cli"
+Hatetepe::CLI.start
