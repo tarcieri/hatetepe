@@ -33,7 +33,7 @@ describe "start command" do
   end
   
   it "starts an instance of Rity" do
-    add_stop_timer 0.01
+    add_stop_timer 0.05
     hook_event_loop do
       Socket.tcp("127.0.0.1", 3000) {|*| }
     end
@@ -57,7 +57,7 @@ describe "start command" do
   
   describe "--port option" do
     it "changes the listen port" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         Socket.tcp("127.0.0.1", 3001) {|*| }
       end
@@ -67,7 +67,7 @@ describe "start command" do
     end
     
     it "has an alias: -p" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         Socket.tcp("127.0.0.1", 3002) {|*| }
       end
@@ -79,7 +79,7 @@ describe "start command" do
   
   describe "--bind option" do
     it "changes the listen interface" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         Socket.tcp("127.0.0.2", 3000) {|*| }
       end
@@ -89,7 +89,7 @@ describe "start command" do
     end
     
     it "has an alias: -b" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         Socket.tcp("127.0.0.3", 3000) {|*| }
       end
@@ -101,7 +101,7 @@ describe "start command" do
   
   describe "--rackup option" do
     it "changes the rackup file that'll be loaded" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
         response = EM::Synchrony.sync(request)
@@ -111,7 +111,7 @@ describe "start command" do
     end
     
     it "has an alias: -r" do
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
         response = EM::Synchrony.sync(request)
@@ -125,7 +125,7 @@ describe "start command" do
     it "discards all output" do
       pending
       
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       Hatetepe::CLI.start %w{--quiet}
       
       $stderr.string.should be_empty
@@ -134,7 +134,7 @@ describe "start command" do
     it "has an alias: -q" do
       pending
       
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       Hatetepe::CLI.start %w{-q}
       
       $stderr.string.should be_empty
@@ -145,7 +145,7 @@ describe "start command" do
     it "prints debugging data" do
       pending
       
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
       end
@@ -157,7 +157,7 @@ describe "start command" do
     it "has an alias: -V" do
       pending
       
-      add_stop_timer 0.01
+      add_stop_timer 0.05
       hook_event_loop do
         request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
       end

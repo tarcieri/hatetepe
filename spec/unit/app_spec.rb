@@ -48,10 +48,21 @@ describe Hatetepe::App do
       [500, {"Content-Type" => "text/html"}, ["Internal Server Error"]]
     }
     
-    it "exception handling" do
+    it "responds with 500 when catching an exception" do
       inner_app.stub(:call) { raise }
       app.should_receive(:postprocess) {|e, res|
         res.should == error_response
+      }
+      
+      app.call env
+    end
+    
+    let(:async_response) { [-1, {}, []] }
+    
+    it "catches :async for Thin compatibility" do
+      inner_app.stub(:call) { throw :async }
+      app.should_receive(:postprocess) {|e, res|
+        res.should == async_response
       }
       
       app.call env

@@ -21,7 +21,10 @@ module Hatetepe
         postprocess env, response
       }
       
-      response = app.call(env) rescue ERROR_RESPONSE
+      response = ASYNC_RESPONSE
+      catch(:async) {
+        response = app.call(env) rescue ERROR_RESPONSE
+      }
       postprocess env, response
     end
     
