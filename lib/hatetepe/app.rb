@@ -4,6 +4,11 @@ require "rack"
 Rack::STREAMING = "Rack::STREAMING"
 
 module Hatetepe
+  ASYNC_RESPONSE = [-1, {}, []].freeze
+  
+  ERROR_RESPONSE = [500, {"Content-Type" => "text/html"},
+                    ["Internal Server Error"]].freeze
+  
   class App
     attr_reader :app
     
@@ -15,17 +20,22 @@ module Hatetepe
       env["async.callback"] = proc {|response|
         postprocess env, response
       }
-      postprocess env, app.call(env)
+      
+      response = app.call(env) rescue ERROR_RESPONSE
+      postprocess env, response
     end
     
     def postprocess(env, response)
-      return if response[0] < 0
+      return if response[0] == ASYNC_RESPONSE[0]
       
       env["stream.start"].call response[0..1]
       return if response[2] == Rack::STREAMING
       
-      response[2].each {|chunk| env["stream.send"].call chunk }
-      env["stream.close"].call
+      begin
+        response[2].each {|chunk| env["stream.send"].call chunk }
+      ensure
+        env["stream.close"].call
+      end
     end
   end
 end

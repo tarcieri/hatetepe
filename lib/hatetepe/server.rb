@@ -14,18 +14,19 @@ module Hatetepe
       #Prefork.run server if config[:prefork]
     end
     
-    attr_reader :app, :log, :config
+    attr_reader :app, :config, :errors
     attr_reader :requests, :parser, :builder
     
     def initialize(config)
+      @config = config
+      @errors = config[:errors] || $stderr
+      
       @app = Rack::Builder.new.tap {|b|
         b.use Hatetepe::App
         #b.use Hatetepe::Proxy
         b.run config[:app]
       }
-      @log = config[:log]
 
-      @config = config
       super
     end
     
@@ -43,6 +44,11 @@ module Hatetepe
       parser << data
     rescue ParserError
       close_connection
+    rescue Exception => ex
+      close_connection_after_writing
+      backtrace = ex.backtrace.map {|line| "\t#{line}" }.join("\n")
+      errors << "#{ex.class}: #{ex.message}\n#{backtrace}\n"
+      errors.flush
     end
     
     def process(*)
@@ -50,7 +56,13 @@ module Hatetepe
       
       env = request.to_hash.tap {|e|
         e["hatetepe.connection"] = self
+        e["rack.url_scheme"] = "http"
         e["rack.input"].source = self
+        e["rack.errors"] = errors
+        
+        e["rack.multithread"] = false
+        e["rack.multiprocess"] = false
+        e["rack.run_once"] = false
         
         e["SERVER_NAME"] = config[:host].dup
         e["SERVER_PORT"] = String(config[:port])
@@ -60,6 +72,7 @@ module Hatetepe
         e["HTTP_HOST"] = host
         
         e["stream.start"] = proc {|response|
+          e.delete "stream.start"
           EM::Synchrony.sync previous if previous
           response[1]["Server"] = "hatetepe/#{VERSION}"
           builder.response response[0..1]
@@ -68,6 +81,9 @@ module Hatetepe
         e["stream.send"] = builder.method(:body)
         
         e["stream.close"] = proc {
+          e.delete "stream.send"
+          e.delete "stream.close"
+          
           builder.complete
           requests.delete request
           request.succeed

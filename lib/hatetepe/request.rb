@@ -13,16 +13,18 @@ module Hatetepe
     
     def to_hash
       {
+        "rack.version" => [1, 0],
         "hatetepe.request" => self,
         "rack.input" => body,
-        "REQUEST_URI" => uri.dup,
         "REQUEST_METHOD" => verb.dup,
-        "PATH_INFO" => uri.dup,
-        "SCRIPT_NAME" => ""
-      }.tap {|hash|
+        "REQUEST_URI" => uri.dup
+      }.tap {|h|
         headers.each {|key, value|
-          hash["HTTP_#{key.upcase.gsub(/[^A-Z_]/, "_")}"] = value
+          h["HTTP_#{key.upcase.gsub(/[^A-Z_]/, "_")}"] = value
         }
+        
+        h["REQUEST_PATH"], qm, h["QUERY_STRING"] = uri.partition("?")
+        h["PATH_INFO"], h["SCRIPT_NAME"] = h["REQUEST_PATH"].dup, ""
       }
     end
   end

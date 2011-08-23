@@ -34,11 +34,24 @@ describe Hatetepe::App do
       env["async.callback"].call response
     end
     
-    it "calls env[async.callback] with the return of inner_app#call(env)" do
+    it "calls #postprocess with the return of inner_app#call(env)" do
       inner_app.stub :call => response
       app.should_receive(:postprocess) {|e, res|
         e.should equal(env)
         res.should equal(response)
+      }
+      
+      app.call env
+    end
+    
+    let(:error_response) {
+      [500, {"Content-Type" => "text/html"}, ["Internal Server Error"]]
+    }
+    
+    it "exception handling" do
+      inner_app.stub(:call) { raise }
+      app.should_receive(:postprocess) {|e, res|
+        res.should == error_response
       }
       
       app.call env
@@ -70,6 +83,15 @@ describe Hatetepe::App do
     it "closes the response stream after streaming the body" do
       env["stream.close"].should_receive :call
       app.postprocess env, [status, headers, body]
+    end
+    
+    it "closes the response even if streaming the body fails" do
+      body.should_receive(:each).and_raise
+      env["stream.close"].should_receive :call
+      
+      proc {
+        app.postprocess env, [status, headers, body]
+      }.should raise_error
     end
   end
 end

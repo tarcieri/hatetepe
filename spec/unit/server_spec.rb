@@ -17,15 +17,15 @@ describe Hatetepe::Server do
   }
   
   let(:app) { stub "app" }
-  let(:log) { stub "log" }
   let(:host) { "127.0.4.1" }
   let(:port) { 8081 }
+  let(:errors) { stub "errors", :<< => nil, :flush => nil }
   let(:config) {
     {
       :app => app,
-      :log => log,
       :host => host,
-      :port => port
+      :port => port,
+      :errors => errors
     }
   }
   
@@ -51,9 +51,15 @@ describe Hatetepe::Server do
       server.app.should equal(builder)
     end
     
-    it "sets up logging" do
+    it "sets up the error stream" do
       server.send :initialize, config
-      server.log.should equal(log)
+      server.errors.should equal(errors)
+    end
+    
+    it "uses stderr as default error stream" do
+      config.delete :errors
+      server.send :initialize, config
+      server.errors.should equal($stderr)
     end
   end
   
@@ -78,6 +84,8 @@ describe Hatetepe::Server do
   end
   
   context "#receive_data(data)" do
+    before { server.stub :close_connection_after_writing }
+    
     it "feeds data into the parser" do
       data = stub("data")
       server.parser.should_receive(:<<).with data
@@ -90,18 +98,42 @@ describe Hatetepe::Server do
       
       server.receive_data "irrelevant data"
     end
+    
+    it "closes the connection when catching an exception" do
+      server.parser.should_receive(:<<).and_raise
+      server.should_receive :close_connection_after_writing
+      
+      server.receive_data ""
+    end
+    
+    it "logs caught exceptions" do
+      server.parser.should_receive(:<<).and_raise "error message"
+      errors.should_receive(:<<) {|str|
+        str.should include("error message")
+      }
+      errors.should_receive :flush
+      
+      server.receive_data ""
+    end
   end
   
   context "#process" do
     it "puts useful stuff into env[]" do
       app.should_receive(:call) {|e|
         e.should equal(env)
+        e["rack.url_scheme"].should == "http"
         e["hatetepe.connection"].should equal(server)
         e["rack.input"].source.should equal(server)
+        e["rack.errors"].should equal(server.errors)
+        e["rack.multithread"].should be_false
+        e["rack.multiprocess"].should be_false
+        e["rack.run_once"].should be_false
+        
         e["SERVER_NAME"].should == host
         e["SERVER_NAME"].should_not equal(host)
         e["SERVER_PORT"].should == String(port)
         e["HTTP_HOST"].should == "#{host}:#{port}"
+        
         [-1]
       }
       server.process
@@ -117,16 +149,28 @@ describe Hatetepe::Server do
     end
   end
   
-  context "env[stream.start]" do
+  context "env[stream.start].call(response)" do
     let(:previous) { EM::DefaultDeferrable.new }
     let(:response) {
-      [123, {"Key" => "value"}, Rack::STREAMING]
+      [200, {"Key" => "value"}, Rack::STREAMING]
     }
     
     before {
       server.requests.unshift previous
       app.stub(:call) {|e| response }
+      request.stub :succeed
+      server.builder.stub :response
     }
+    
+    it "deletes itself from env[] to prevent multiple calls" do
+      app.stub(:call) {|e|
+        e["stream.start"].call response
+        e.key?("stream.start").should be_false
+        [-1]
+      }
+      previous.succeed
+      server.process
+    end
     
     it "waits for the previous request's response to finish" do
       server.builder.should_not_receive :response
@@ -135,8 +179,8 @@ describe Hatetepe::Server do
     
     it "initiates the response" do
       server.builder.should_receive(:response) {|res|
-        res[0].should == 123
-        res[1]["Key"].should == "value"
+        res[0].should equal(response[0])
+        res[1]["Key"].should equal(response[1]["Key"])
         res[1]["Server"].should == "hatetepe/#{Hatetepe::VERSION}"
       }
       previous.succeed
@@ -144,7 +188,7 @@ describe Hatetepe::Server do
     end
   end
   
-  context "env[stream.send]" do
+  context "env[stream.send].call(chunk)" do
     it "passes data to the builder" do
       app.stub(:call) {|e|
         e["stream.send"].should == server.builder.method(:body)
@@ -154,7 +198,7 @@ describe Hatetepe::Server do
     end
   end
   
-  context "env[stream.close]" do
+  context "env[stream.close].call" do
     before {
       server.stub :close_connection
       server.builder.stub :complete
@@ -193,6 +237,16 @@ describe Hatetepe::Server do
       server.should_receive(:close_connection).with true
       app.stub(:call) {|e|
         e["stream.close"].call
+        [-1]
+      }
+      server.process
+    end
+    
+    it "deletes itself and stream.send from env[] to prevent multiple calls" do
+      app.stub(:call) {|e|
+        e["stream.close"].call
+        e.key?("stream.send").should be_false
+        e.key?("stream.close").should be_false
         [-1]
       }
       server.process
