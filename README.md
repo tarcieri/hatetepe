@@ -7,18 +7,16 @@ TODO
 ----
 
 - Proxy
-- Rack handler
 - Code reloading
 - Client
 - Keep-alive
 - Preforking
 - Native file sending/receiving
-- Contents of env hash
 - MVM support via Thread Pool
 - Support for SPDY
 - Serving via filesystem or in-memory
 - Foreman support
-- Demonizing and dropping privileges
+- Daemonizing and dropping privileges
 - Trailing headers
 
 Things to check out
