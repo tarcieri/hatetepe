@@ -70,6 +70,8 @@ module Hatetepe
     end
     
     def <<(request)
+      request.headers["Host"] = "#{config[:host]}:#{config[:port]}"
+      
       builder.reset
       requests << request
       
