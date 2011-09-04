@@ -86,6 +86,10 @@ module Hatetepe
       parser << data
     end
     
+    def stop
+      close_connection_after_writing
+    end
+    
     def responses
       requests.map(&:response).compact
     end
