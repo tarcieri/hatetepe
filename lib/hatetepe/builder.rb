@@ -29,7 +29,7 @@ module Hatetepe
     
     def reset
       @state = :ready
-      @chunked = true
+      @chunked = nil
     end
     
     [:write, :complete, :error].each do |hook|
@@ -101,6 +101,7 @@ module Hatetepe
       
       if header[0..13] == "Content-Length"
         @chunked = false
+      elsif header[0..17] == "Transfer-Encoding"
       end
       
       write "#{header}\r\n"
@@ -112,7 +113,10 @@ module Hatetepe
       elsif writing_trailing_headers?
         error "Cannot write body after trailing headers"
       elsif writing_headers?
-        header "Transfer-Encoding", "chunked" if chunked?
+        if @chunked.nil?
+          header "Transfer-Encoding", "chunked"
+          @chunked = true
+        end
         write "\r\n"
         @state = :writing_body
       end
