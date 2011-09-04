@@ -8,5 +8,13 @@ module Hatetepe
       @status = status
       super http_version
     end
+    
+    def to_a
+      [status, headers, body]
+    end
+    
+    def [](i)
+      to_a[i]
+    end
   end
 end
