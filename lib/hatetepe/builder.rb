@@ -101,7 +101,7 @@ module Hatetepe
       
       if header[0..13] == "Content-Length"
         @chunked = false
-      elsif header[0..17] == "Transfer-Encoding"
+      elsif header[0..16] == "Transfer-Encoding"
         @chunked = true
       end
       
