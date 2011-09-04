@@ -18,6 +18,7 @@ TODO
 - Foreman support
 - Daemonizing and dropping privileges
 - Trailing headers
+- Propagating connection errors to the app
 
 Things to check out
 -------------------
