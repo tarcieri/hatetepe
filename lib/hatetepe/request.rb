@@ -4,7 +4,7 @@ module Hatetepe
   class Request < Message
     include EM::Deferrable
     
-    attr_accessor :verb, :uri
+    attr_accessor :verb, :uri, :response
     
     def initialize(verb, uri, http_version = "1.1")
       @verb, @uri = verb, uri
