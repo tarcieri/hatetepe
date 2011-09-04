@@ -122,7 +122,7 @@ module Hatetepe
       end
       
       if chunked?
-        write "#{chunk.length.to_s(16)}\r\n#{chunk}\r\n"
+        write "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
       else
         write chunk
       end
