@@ -23,7 +23,9 @@ module Hatetepe
       EM::Synchrony.sync Request.new(verb, uri.request_uri).tap {|req|
         req.headers = headers
         req.body = body || Body.new.tap {|b| b.close_write }
-        client << req
+        Fiber.new {
+          client << req
+        }.resume
       }
     end
     
