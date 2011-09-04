@@ -102,6 +102,7 @@ module Hatetepe
       if header[0..13] == "Content-Length"
         @chunked = false
       elsif header[0..17] == "Transfer-Encoding"
+        @chunked = true
       end
       
       write "#{header}\r\n"
@@ -115,7 +116,6 @@ module Hatetepe
       elsif writing_headers?
         if @chunked.nil?
           header "Transfer-Encoding", "chunked"
-          @chunked = true
         end
         write "\r\n"
         @state = :writing_body
