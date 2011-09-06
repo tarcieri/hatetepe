@@ -90,6 +90,12 @@ module Hatetepe
       raw_header "#{name}: #{value}#{charset}"
     end
     
+    def headers(hash)
+      # wrong number of arguments (1 for 2)
+      #hash.each_pair &method(:header)
+      hash.each_pair {|name, value| header name, value }
+    end
+    
     def raw_header(header)
       if ready?
         error "A request or response line is required before writing headers"
@@ -109,6 +115,11 @@ module Hatetepe
     end
     
     def body(chunk)
+      if Body === chunk
+        chunk.each &method(:body)
+        return
+      end
+      
       if ready?
         error "A request or response line and headers are required before writing body"
       elsif writing_trailing_headers?
