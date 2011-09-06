@@ -23,9 +23,7 @@ module Hatetepe
       EM::Synchrony.sync Request.new(verb, uri.request_uri).tap {|req|
         req.headers = headers
         req.body = body || Body.new.tap {|b| b.close_write }
-        Fiber.new {
-          client << req
-        }.resume
+        client << req
       }
     end
     
@@ -47,16 +45,16 @@ module Hatetepe
     
     def initialize(config)
       @config = config
+      @requests = []
+      @parser, @builder = Parser.new, Builder.new
       super
     end
     
     def post_init
-      @requests = []
-      @parser, @builder = Parser.new, Builder.new
-      
       parser.on_response {|response|
         requests.find {|req| !req.response }.response = response
       }
+      
       parser.on_headers {
         requests.reverse.find {|req| !!req.response }.tap {|req|
           req.succeed req.response
@@ -71,14 +69,14 @@ module Hatetepe
     
     def <<(request)
       request.headers["Host"] = "#{config[:host]}:#{config[:port]}"
-      
-      builder.reset
+
       requests << request
-      
-      builder.request request.verb, request.uri
-      request.headers.each_pair {|key, value| builder.header key, value }
-      request.body.each &builder.method(:body) unless request.body.empty?
-      builder.complete
+      Fiber.new {
+        builder.request request.verb, request.uri
+        builder.headers request.headers
+        builder.body request.body unless request.body.empty?
+        builder.complete
+      }.resume
     end
     
     def receive_data(data)
