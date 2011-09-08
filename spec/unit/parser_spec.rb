@@ -207,6 +207,7 @@ describe Hatetepe::Parser do
     
     it "finishes the body" do
       parser.on_body {|body|
+        body.should_receive :rewind
         body.should_receive :close_write
       }
       do_request

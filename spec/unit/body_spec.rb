@@ -87,11 +87,6 @@ describe Hatetepe::Body do
       body.close_write.should equal(ret)
     end
     
-    it "rewinds" do
-      body.should_receive :rewind
-      body.close_write
-    end
-    
     it "succeeds the body" do
       body.should_receive :succeed
       body.close_write

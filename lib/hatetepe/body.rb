@@ -38,7 +38,6 @@ module Hatetepe
     
     def close_write
       ret = @io.close_write
-      rewind
       succeed
       ret
     end
