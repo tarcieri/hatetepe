@@ -38,6 +38,7 @@ module Hatetepe
     
     def close_write
       ret = @io.close_write
+      rewind
       succeed
       ret
     end
@@ -54,13 +55,11 @@ module Hatetepe
     
     def read(*args)
       sync
-      rewind
       @io.read *args
     end
     
     def gets
       sync
-      rewind
       @io.gets
     end
     

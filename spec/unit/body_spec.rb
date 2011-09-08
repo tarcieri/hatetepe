@@ -87,6 +87,11 @@ describe Hatetepe::Body do
       body.close_write.should equal(ret)
     end
     
+    it "rewinds" do
+      body.should_receive :rewind
+      body.close_write
+    end
+    
     it "succeeds the body" do
       body.should_receive :succeed
       body.close_write
@@ -135,13 +140,6 @@ describe Hatetepe::Body do
       read.should be_true
     end
     
-    it "rewinds the body" do
-      body.succeed
-      
-      body.should_receive :rewind
-      body.read
-    end
-    
     it "forwards to io#read" do
       body.succeed
       args, ret = [stub("arg#1"), stub("arg#2")], stub("ret")
@@ -160,13 +158,6 @@ describe Hatetepe::Body do
       
       body.succeed
       read.should be_true
-    end
-    
-    it "rewinds the body" do
-      body.succeed
-      
-      body.should_receive :rewind
-      body.gets
     end
     
     it "forwards to io#gets" do
