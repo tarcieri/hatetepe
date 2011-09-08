@@ -29,5 +29,7 @@ module Rack
         }
       end
     end
+    
+    register "hatetepe", Rack::Handler::Hatetepe
   end
 end
