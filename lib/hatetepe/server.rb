@@ -74,7 +74,7 @@ module Hatetepe
         e["stream.start"] = proc {|response|
           e.delete "stream.start"
           EM::Synchrony.sync previous if previous
-          response[1]["Server"] = "hatetepe/#{VERSION}"
+          response[1]["Server"] = "hatetepe/#{Hatetepe::VERSION}"
           builder.response response[0..1]
         }
         
