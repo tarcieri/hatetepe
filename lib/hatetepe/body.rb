@@ -64,13 +64,17 @@ module Hatetepe
     
     def write(chunk)
       ret = @io.write chunk
-      @receivers.each {|r| r.call chunk }
+      Fiber.new {
+        @receivers.each {|r| r.call chunk }
+      }.resume
       ret
     end
     
     def <<(chunk)
       ret = @io << chunk
-      @receivers.each {|r| r.call chunk }
+      Fiber.new {
+        @receivers.each {|r| r.call chunk }
+      }.resume
       ret
     end
   end
