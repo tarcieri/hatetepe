@@ -7,6 +7,7 @@ require "hatetepe/builder"
 require "hatetepe/parser"
 require "hatetepe/request"
 require "hatetepe/response"
+require "hatetepe/version"
 
 module Hatetepe
   class Client < EM::Connection

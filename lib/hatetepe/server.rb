@@ -6,6 +6,7 @@ require "hatetepe/app"
 require "hatetepe/builder"
 require "hatetepe/parser"
 require "hatetepe/request"
+require "hatetepe/version"
 
 module Hatetepe
   class Server < EM::Connection
@@ -74,7 +75,7 @@ module Hatetepe
         e["stream.start"] = proc {|response|
           e.delete "stream.start"
           EM::Synchrony.sync previous if previous
-          response[1]["Server"] = "hatetepe/#{Hatetepe::VERSION}"
+          response[1]["Server"] = "hatetepe/#{VERSION}"
           builder.response response[0..1]
         }
         
