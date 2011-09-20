@@ -19,8 +19,8 @@ describe Rack::Handler::Hatetepe do
     }
     
     it "starts an Hatetepe server" do
+      EM.should_receive :epoll
       EM.should_receive(:run) {|&block|
-        EM.should_receive(:epoll)
         Hatetepe::Server.should_receive(:start) {|opts|
           opts[:host].should equal(options[:Host])
           opts[:port].should equal(options[:Port])

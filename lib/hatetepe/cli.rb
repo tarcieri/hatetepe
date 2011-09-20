@@ -27,11 +27,10 @@ module Hatetepe
       $stderr.flush
       app = Rack::Builder.parse_file(rackup)[0]
 
+      EM.epoll
       EM.synchrony do
         trap("INT") { EM.stop }
         trap("TERM") { EM.stop }
-        
-        EM.epoll
         
         host = options[:bind] || "127.0.0.1"
         port = options[:port] || 3000
