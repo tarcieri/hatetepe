@@ -20,7 +20,7 @@ describe Rack::Handler::Hatetepe do
     
     it "starts an Hatetepe server" do
       EM.should_receive :epoll
-      EM.should_receive(:run) {|&block|
+      EM.should_receive(:synchrony) {|&block|
         Hatetepe::Server.should_receive(:start) {|opts|
           opts[:host].should equal(options[:Host])
           opts[:port].should equal(options[:Port])
@@ -43,7 +43,7 @@ describe Rack::Handler::Hatetepe do
     end
     
     it "can be stopped by sending SIGTERM or SIGINT" do
-      EM.should_receive(:run) {|&block| block.call }
+      EM.should_receive(:synchrony) {|&block| block.call }
       
       trapped_signals = []
       Signal.should_receive(:trap).twice {|sig, &block|

@@ -15,7 +15,7 @@ module Rack
         Signal.trap("TERM") { EM.stop }
         
         EM.epoll
-        EM.run {
+        EM.synchrony {
           server = ::Hatetepe::Server.start options
           yield server if block_given?
         }

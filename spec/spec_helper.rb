@@ -7,9 +7,8 @@ require "em-synchrony/em-http"
 require "fakefs/safe"
 
 RSpec.configure {|config|
-  config.before {
+  config.before(:all) {
     EM.class_eval {
-      @spec_hooks = []
       class << self
         attr_reader :spec_hooks
         def synchrony_with_hooks(blk = nil, tail = nil, &block)
@@ -24,14 +23,21 @@ RSpec.configure {|config|
     }
   }
   
-  config.after {
+  config.after(:all) {
     EM.class_eval {
-      @spec_hooks = nil
       class << self
         remove_method :spec_hooks
         alias_method :synchrony, :synchrony_without_hooks
         remove_method :synchrony_with_hooks
       end
     }
+  }
+  
+  config.before(:each) {
+    EM.instance_variable_set :@spec_hooks, []
+  }
+  
+  config.after(:each) {
+    EM.instance_variable_set :@spec_hooks, nil
   }
 }
