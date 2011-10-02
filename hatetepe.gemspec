@@ -12,16 +12,16 @@ Gem::Specification.new do |s|
   s.summary     = %q{The HTTP toolkit}
   #s.description = %q{TODO: write description}
 
-  s.add_dependency "http_parser.rb"
+  s.add_dependency "http_parser.rb", "~> 0.5.3"
   s.add_dependency "eventmachine"
-  s.add_dependency "em-synchrony"
+  s.add_dependency "em-synchrony", "~> 1.0"
   s.add_dependency "rack"
   s.add_dependency "async-rack"
   s.add_dependency "thor"
   
   s.add_development_dependency "rspec"
   s.add_development_dependency "fakefs"
-  s.add_development_dependency "em-http-request"
+  s.add_development_dependency "em-http-request", "~> 1.0"
 
   s.files         = `git ls-files`.split("\n") - [".gitignore"]
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
