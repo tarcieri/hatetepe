@@ -107,7 +107,7 @@ module Hatetepe
       
       if header[0..13] == "Content-Length"
         @chunked = false
-      elsif header[0..16] == "Transfer-Encoding"
+      elsif @chunked.nil? && header[0..16] == "Transfer-Encoding"
         @chunked = true
       end
       
@@ -142,12 +142,10 @@ module Hatetepe
     def complete
       return if ready?
       
-      if writing_body? && chunked?
-        write "0\r\n"
-        write "\r\n"
-      elsif writing_headers? || writing_trailing_headers?
-        write "\r\n"
+      if writing_headers? || writing_trailing_headers?
+        header "Content-Length", "0"
       end
+      body ""
       
       on_complete.each {|blk| blk.call }
       reset
