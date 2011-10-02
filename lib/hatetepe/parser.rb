@@ -41,11 +41,7 @@ module Hatetepe
           message.body << chunk unless message.body.closed_write?
         }
         
-        p.on_message_complete = proc {
-          message.body.rewind
-          message.body.close_write unless message.body.closed_write?
-          event! :complete
-        }
+        p.on_message_complete = method(:complete)
       }
       
       reset
@@ -59,6 +55,12 @@ module Hatetepe
       @parser.reset!
       event! :reset
       @message = nil
+    end
+    
+    def complete
+      message.body.rewind
+      message.body.close_write unless message.body.closed_write?
+      event! :complete
     end
     
     def <<(data)
