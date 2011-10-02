@@ -115,7 +115,7 @@ module Hatetepe
     end
     
     def body(chunk)
-      if Body === chunk
+      if chunk.respond_to? :each
         chunk.each &method(:body)
         return
       end

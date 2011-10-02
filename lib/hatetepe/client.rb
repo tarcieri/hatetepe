@@ -75,8 +75,25 @@ module Hatetepe
       requests << request
       Fiber.new {
         builder.request request.verb, request.uri
+        
+        if request.headers["Content-Type"] == "application/x-www-form-urlencoded"
+          if request.body.respond_to? :read
+            request.headers["Content-Length"] = request.body.read.bytesize
+          else
+            request.headers["Content-Length"] = request.body.length
+          end
+        end
         builder.headers request.headers
-        builder.body request.body unless request.body.empty?
+        
+        b = request.body
+        if Body === b || b.respond_to?(:each)
+          builder.body b
+        elsif b.respond_to? :read
+          builder.body b.read
+        else
+          builder.body [b]
+        end
+        
         builder.complete
       }.resume
     end
