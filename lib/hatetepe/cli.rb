@@ -22,8 +22,8 @@ module Hatetepe
     method_option :rackup, :aliases => "-r", :type => :string,
       :banner => "Load specified rackup (.ru) file (default: config.ru)"
     def start
-      rackup = options[:rackup] || "config.ru"
-      $stderr << "Booting from #{File.expand_path rackup}\n"
+      rackup = File.expand_path(options[:rackup] || "config.ru")
+      $stderr << "Booting from #{rackup}\n"
       $stderr.flush
       app = Rack::Builder.parse_file(rackup)[0]
 
