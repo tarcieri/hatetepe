@@ -151,8 +151,8 @@ module Hatetepe
       reset
     end
     
-    def write(chunk)
-      on_write.each {|blk| blk.call(chunk) }
+    def write(data)
+      on_write.each {|blk| blk.call data }
     end
     
     def error(message)
