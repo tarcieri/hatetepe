@@ -210,7 +210,7 @@ describe Hatetepe::Client do
     it "feeds the builder" do
       request.body.write "asdf"
       
-      builder.should_receive(:request).with request.verb, request.uri
+      builder.should_receive(:request_line).with request.verb, request.uri
       builder.should_receive(:headers).with request.headers
       builder.should_receive(:body).with request.body
       builder.should_receive(:complete)
@@ -220,7 +220,7 @@ describe Hatetepe::Client do
     
     it "wraps the builder feeding within a Fiber" do
       outer, inner = Fiber.current, nil
-      builder.should_receive(:request) {
+      builder.should_receive(:request_line) {
         inner = Fiber.current
       }
       

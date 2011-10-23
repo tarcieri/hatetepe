@@ -74,7 +74,7 @@ module Hatetepe
 
       requests << request
       Fiber.new {
-        builder.request request.verb, request.uri
+        builder.request_line request.verb, request.uri
         
         if request.headers["Content-Type"] == "application/x-www-form-urlencoded"
           if request.body.respond_to? :read

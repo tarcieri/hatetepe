@@ -75,8 +75,10 @@ module Hatetepe
         e["stream.start"] = proc {|response|
           e.delete "stream.start"
           EM::Synchrony.sync previous if previous
+          
+          builder.response_line response[0]
           response[1]["Server"] = "hatetepe/#{VERSION}"
-          builder.response response[0..1]
+          builder.headers response[1]
         }
         
         e["stream.send"] = builder.method(:body)

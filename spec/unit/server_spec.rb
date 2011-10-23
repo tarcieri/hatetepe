@@ -159,7 +159,8 @@ describe Hatetepe::Server do
       server.requests.unshift previous
       app.stub(:call) {|e| response }
       request.stub :succeed
-      server.builder.stub :response
+      server.builder.stub :response_line
+      server.builder.stub :headers
     }
     
     it "deletes itself from env[] to prevent multiple calls" do
@@ -178,10 +179,12 @@ describe Hatetepe::Server do
     end
     
     it "initiates the response" do
-      server.builder.should_receive(:response) {|res|
-        res[0].should equal(response[0])
-        res[1]["Key"].should equal(response[1]["Key"])
-        res[1]["Server"].should == "hatetepe/#{Hatetepe::VERSION}"
+      server.builder.should_receive(:response_line) {|code|
+        code.should equal(response[0])
+      }
+      server.builder.should_receive(:headers) {|headers|
+        headers["Key"].should equal(response[1]["Key"])
+        headers["Server"].should == "hatetepe/#{Hatetepe::VERSION}"
       }
       previous.succeed
       server.process

@@ -60,27 +60,32 @@ module Hatetepe
       @chunked
     end
     
-    def request(verb, uri, version = "1.1")
+    def request(req)
+      request_line req[0], req[1]
+      headers req[2]
+      body req[3] if req[3]
+      complete
+    end
+    
+    def request_line(verb, uri, version = "1.1")
       complete unless ready?
       write "#{verb.upcase} #{uri} HTTP/#{version}\r\n"
       @state = :writing_headers
     end
     
-    def response(code, version = "1.1")
-      if Array === code
-        response(code[0])
-        code[1].each_pair {|name, value| header(name, value) }
-        if code[2]
-          code[2].each {|chunk| body(chunk) }
-          complete
-        end
-        return
-      end
-      
+    def response(res)
+      response_line res[0]
+      headers res[1]
+      body res[2] if res[2]
+      complete
+    end
+    
+    def response_line(code, version = "1.1")
       complete unless ready?
       unless status = STATUS_CODES[code]
         error "Unknown status code: #{code}"
       end
+      
       write "HTTP/#{version} #{code} #{status}\r\n"
       @state = :writing_headers
     end
@@ -91,9 +96,7 @@ module Hatetepe
     end
     
     def headers(hash)
-      # wrong number of arguments (1 for 2)
-      #hash.each_pair &method(:header)
-      hash.each_pair {|name, value| header name, value }
+      hash.each {|h| header *h }
     end
     
     def raw_header(header)
