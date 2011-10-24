@@ -81,7 +81,7 @@ module Hatetepe
           builder.headers response[1]
         }
         
-        e["stream.send"] = builder.method(:body)
+        e["stream.send"] = builder.method(:body_chunk)
         
         e["stream.close"] = proc {
           e.delete "stream.send"

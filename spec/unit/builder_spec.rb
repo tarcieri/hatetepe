@@ -157,11 +157,216 @@ describe Hatetepe::Builder do
     end
   end
   
-  describe "#header(name, value, charset)"
-  describe "#headers(hash)"
-  describe "#raw_header(header)"
-  describe "#body(chunk)"
-  describe "#complete"
-  describe "#write(data)"
-  describe "#error(message)" 
+  describe "#headers(hash)" do
+    it "writes each of the header pairs" do
+      builder.should_receive(:header).with "Key", "value"
+      builder.should_receive(:header).with "Key2", "value2"
+      builder.headers "Key" => "value", "Key2" => "value2"
+    end
+  end
+  
+  describe "#header(name, value)" do
+    it "writes the header pair" do
+      builder.should_receive(:raw_header).with "Key: value"
+      builder.header "Key", "value"
+    end
+  end
+  
+  describe "#raw_header(header)" do
+    before do
+      builder.send :initialize
+      builder.response_line 200
+    end
+    
+    it "writes the header line" do
+      builder.should_receive(:write).with "Key: value\r\n"
+      builder.raw_header "Key: value"
+    end
+    
+    it "fails if no request or response line has been written" do
+      builder.reset
+      builder.should_receive :error
+      builder.raw_header "Key: value"
+    end
+    
+    it "fails if body already started" do
+      builder.header "Content-Length", 5
+      builder.body_chunk "asd"
+      
+      builder.should_receive :error
+      builder.raw_header "Key: value"
+    end
+    
+    it "writes trailing header if body already started and transfer is chunked" do
+      builder.header "Transfer-Encoding", "chunked"
+      builder.body_chunk "asd"
+      
+      builder.should_not_receive :error
+      builder.should_receive(:write).with "0\r\n"
+      builder.should_receive(:write).with "Key: value\r\n"
+      builder.raw_header "Key: value"
+      
+      builder.state.should equal(:writing_trailing_headers)
+    end
+    
+    it "sets the chunked flag" do
+      builder.header "Transfer-Encoding", "chunked"
+      builder.chunked?.should be_true
+      
+      builder.reset
+      builder.response_line 200
+      
+      builder.header "Content-Length", "0"
+      builder.chunked?.should be_false
+    end
+    
+    it "doesn't set the chunked flag a second time" do
+      builder.header "Transfer-Encoding", "chunked"
+      builder.chunked?.should be_true
+      
+      builder.header "Content-Length", "0"
+      builder.chunked?.should be_true
+    end
+  end
+  
+  describe "#body(#each)" do
+    let(:body) { [stub("chunk#1"), stub("chunk#2")] }
+    
+    it "calls #body_chunk for each element" do
+      builder.should_receive(:body_chunk).with body[0]
+      builder.should_receive(:body_chunk).with body[1]
+      builder.body body
+    end
+  end
+  
+  describe "#body_chunk(chunk)" do
+    before do
+      builder.send :initialize
+      builder.response_line 200
+    end
+    
+    it "fails if no request or response line has been written" do
+      builder.reset
+      builder.should_receive :error
+      builder.body_chunk "asd"
+    end
+    
+    it "fails if already writing trailing headers" do
+      builder.body_chunk "asd"
+      builder.header "Key", "value"
+      builder.should_receive :error
+      builder.body_chunk "asd"
+    end
+    
+    it "assumes Transfer-Encoding: chunked if chunked flag isn't set" do
+      builder.should_receive(:header).with "Transfer-Encoding", "chunked"
+      builder.body_chunk "asd"
+    end
+    
+    it "changes the state to :writing_body" do
+      builder.body_chunk "asd"
+      builder.state.should equal(:writing_body)
+    end
+    
+    it "writes chunked body data" do
+      builder.body_chunk ""
+      builder.should_receive(:write).with "c\r\nasdfoobarbaz\r\n"
+      builder.body_chunk "asdfoobarbaz"
+    end
+    
+    it "writes empty chunked data" do
+      builder.body_chunk ""
+      builder.should_receive(:write).with "0\r\n\r\n"
+      builder.body_chunk ""
+    end
+    
+    it "writes plain body data" do
+      builder.header "Content-Length", "12"
+      builder.body_chunk ""
+      builder.should_receive(:write).with "asdfoobarbaz"
+      builder.body_chunk "asdfoobarbaz"
+    end
+    
+    it "doesn't write empty plain data" do
+      builder.header "Content-Length", "123"
+      builder.body_chunk ""
+      builder.should_not_receive :write
+      builder.body_chunk ""
+    end
+  end
+  
+  describe "#complete" do
+    before do
+      builder.send :initialize
+      builder.response_line 200
+      builder.stub :body_chunk
+    end
+    
+    it "does nothing if state is :ready" do
+      builder.reset
+      builder.should_not_receive :write
+      builder.complete
+    end
+    
+    it "sets Content-Length to 0 if no body has been sent and transfer is chunked" do
+      builder.should_receive(:header).with "Content-Length", "0"
+      builder.complete
+    end
+    
+    it "writes an empty body chunk" do
+      builder.should_receive(:body_chunk).with ""
+      builder.complete
+    end
+    
+    let(:hook) { stub "hook", :call => nil }
+    
+    it "calls the on_complete hooks" do
+      builder.on_complete << hook
+      hook.should_receive :call
+      builder.complete
+    end
+    
+    it "calls #reset" do
+      builder.should_receive :reset
+      builder.complete
+    end
+  end
+  
+  describe "#write(data)" do
+    let(:hook) { stub "hook" }
+    let(:data) { stub "data" }
+    
+    before { builder.send :initialize }
+    
+    it "calls the on_write hooks" do
+      builder.on_write << hook
+      hook.should_receive(:call).with data
+      builder.write data
+    end
+  end
+  
+  describe "#error(message)" do
+    let(:hook1) { stub "hook#1" }
+    let(:hook2) { stub "hook#2" }
+    let(:message) { "error! error!" }
+    let(:exception) { stub "exception" }
+    
+    before do
+      builder.send :initialize
+      builder.on_error << hook1 << hook2
+    end
+    
+    it "calls the error hooks" do
+      Hatetepe::BuilderError.stub :new => exception
+      
+      hook1.should_receive(:call).with exception
+      hook2.should_receive(:call).with exception
+      builder.error message
+    end
+    
+    it "raises the exception if no hooks were added" do
+      builder.on_error.clear
+      proc { builder.error message }.should raise_error(Hatetepe::BuilderError, message)
+    end
+  end
 end

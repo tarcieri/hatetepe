@@ -90,13 +90,12 @@ module Hatetepe
       @state = :writing_headers
     end
     
-    def header(name, value, charset = nil)
-      charset = charset ? "; charset=#{charset}" : ""
-      raw_header "#{name}: #{value}#{charset}"
+    def header(name, value)
+      raw_header "#{name}: #{value}"
     end
     
     def headers(hash)
-      hash.each {|h| header *h }
+      hash.each {|k, v| header k, v }
     end
     
     def raw_header(header)
@@ -108,7 +107,7 @@ module Hatetepe
         @state = :writing_trailing_headers
       end
       
-      if header[0..13] == "Content-Length"
+      if @chunked.nil? && header[0..13] == "Content-Length"
         @chunked = false
       elsif @chunked.nil? && header[0..16] == "Transfer-Encoding"
         @chunked = true
@@ -117,12 +116,12 @@ module Hatetepe
       write "#{header}\r\n"
     end
     
-    def body(chunk)
-      if chunk.respond_to? :each
-        chunk.each &method(:body)
-        return
-      end
-      
+    def body(body)
+      body.each {|c| body_chunk c }
+      # XXX complete here?
+    end
+    
+    def body_chunk(chunk)
       if ready?
         error "A request or response line and headers are required before writing body"
       elsif writing_trailing_headers?
@@ -138,18 +137,18 @@ module Hatetepe
       if chunked?
         write "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
       else
-        write chunk
+        write chunk unless chunk.empty?
       end
     end
     
     def complete
-      return if ready?
-      
-      if writing_headers? || writing_trailing_headers?
+      if ready?
+        return
+      elsif writing_headers? && @chunked.nil?
         header "Content-Length", "0"
       end
-      body ""
-      
+      body_chunk ""
+
       on_complete.each {|blk| blk.call }
       reset
     end
@@ -160,7 +159,6 @@ module Hatetepe
     
     def error(message)
       exception = BuilderError.new(message)
-      exception.set_backtrace(caller[1..-1])
       unless on_error.empty?
         on_error.each {|blk| blk.call(exception) }
       else

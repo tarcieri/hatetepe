@@ -194,7 +194,7 @@ describe Hatetepe::Server do
   context "env[stream.send].call(chunk)" do
     it "passes data to the builder" do
       app.stub(:call) {|e|
-        e["stream.send"].should == server.builder.method(:body)
+        e["stream.send"].should == server.builder.method(:body_chunk)
         [-1]
       }
       server.process

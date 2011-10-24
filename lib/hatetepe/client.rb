@@ -89,7 +89,7 @@ module Hatetepe
         if Body === b || b.respond_to?(:each)
           builder.body b
         elsif b.respond_to? :read
-          builder.body b.read
+          builder.body [b.read]
         else
           builder.body [b]
         end
