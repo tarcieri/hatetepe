@@ -1,5 +1,3 @@
-require "hatetepe/status"
-
 module Hatetepe
   class BuilderError < StandardError; end
   
@@ -82,7 +80,7 @@ module Hatetepe
     
     def response_line(code, version = "1.1")
       complete unless ready?
-      unless status = STATUS_CODES[code]
+      unless status = Rack::Utils::HTTP_STATUS_CODES[code]
         error "Unknown status code: #{code}"
       end
       
