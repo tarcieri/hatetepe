@@ -1,58 +1,35 @@
-require "eventmachine"
-require "uri"
-
 require "hatetepe/client"
+require "uri"
 
 module Hatetepe
   class Proxy
-    attr_reader :app, :env
+    attr_reader :app
     
     def initialize(app)
       @app = app
     end
     
     def call(env)
-      @env = env
-      env["proxy.start"] = method(:start)
-      
+      env["proxy.start"] = proc do |target, client = nil|
+        start env, target, client
+      end
       app.call env
     end
     
-    def start(target)
-      uri = build_uri(target)
-      
+    def start(env, target, client)
+      target = URI.parse(target)
       env.delete "proxy.start"
-      env["proxy.callback"] ||= method(:callback)
       
-      response = Client.request(verb, uri, headers)
-      env["proxy.callback"].call @response, env
-    end
-    
-    def callback(response, env)
-      response
-    end
-  end
-end
-
-module Hatetepe
-  class OldProxy
-    attr_reader :env, :target
-    
-    def initialize(env, target)
-      client = EM.connect target.host, target.port, Client
-      client.request env["rity.request"].verb, env["rity.request"].uri
+      env["proxy.start_reverse"] ||= env["async.callback"]
+      env["proxy.callback"] ||= env["proxy.start_reverse"]
       
-      env["proxy.callback"] ||= proc {|response|
-        env["proxy.start_reverse"].call response
+      cl = client || Client.start(:host => target.host, :port => target.port)
+      env["hatetepe.request"].dup.tap {|req|
+        cl << req
+        EM::Synchrony.sync req
+        cl.stop unless client
+        env["proxy.callback"].call req.response
       }
-      env["proxy.start_reverse"] = proc {|response|
-        env["stream.start"].call *response[0..1]
-        env["stream.send_raw"].call client.requests
-      }
-    end
-    
-    def initialize(env, target)
-      response = Client.request(env["rity.request"])
     end
   end
 end
