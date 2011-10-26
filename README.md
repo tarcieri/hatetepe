@@ -60,6 +60,21 @@ The `Hatetepe::Client` class can be used to make requests to an HTTP server.
 app can respond to.
 
 
+Async Responses
+---------------
+
+Like Thin and Goliath, Hatetepe provides `env["async.callback"]` for responding
+in an asynchronous fashion. Don't forget to synchronously indicate an
+asynchronous response by responding with a status of `-1`.
+
+    def call(env)
+      EM.add_timer(5) do
+        env["async.callback"].call [200, {"Content-Type" => "text/html"}, ["Hello!"]]
+      end
+      [-1]
+    end
+
+
 Proxying
 --------
 
