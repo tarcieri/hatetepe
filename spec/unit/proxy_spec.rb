@@ -64,14 +64,9 @@ describe Hatetepe::Proxy do
       Fiber.new { proxy.start env, target, client }.resume
     end
     
-    it "defaults env[proxy.start_reverse] to env[async.callback]" do
+    it "defaults env[proxy.callback] to env[async.callback]" do
       Fiber.new { proxy.start env, target, client }.resume
-      env["proxy.start_reverse"].should equal(env["async.callback"])
-    end
-
-    it "defaults env[proxy.callback] to env[proxy.start_reverse]" do
-      Fiber.new { proxy.start env, target, client }.resume
-      env["proxy.callback"].should equal(env["proxy.start_reverse"])
+      env["proxy.callback"].should equal(env["async.callback"])
     end
     
     let(:new_client) { stub "new client" }

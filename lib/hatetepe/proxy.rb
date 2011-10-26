@@ -21,8 +21,7 @@ module Hatetepe
       target = URI.parse(target)
       env.delete "proxy.start"
       
-      env["proxy.start_reverse"] ||= env["async.callback"]
-      env["proxy.callback"] ||= env["proxy.start_reverse"]
+      env["proxy.callback"] ||= env["async.callback"]
       
       cl = client || Client.start(:host => target.host, :port => target.port)
       build_request(env, target).tap do |req|
