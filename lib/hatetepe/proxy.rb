@@ -1,4 +1,5 @@
 require "hatetepe/client"
+require "hatetepe/request"
 require "uri"
 
 module Hatetepe
@@ -24,12 +25,30 @@ module Hatetepe
       env["proxy.callback"] ||= env["proxy.start_reverse"]
       
       cl = client || Client.start(:host => target.host, :port => target.port)
-      env["hatetepe.request"].dup.tap {|req|
+      build_request(env, target).tap do |req|
         cl << req
         EM::Synchrony.sync req
         cl.stop unless client
         env["proxy.callback"].call req.response
-      }
+      end
+    end
+    
+    def build_request(env, target)
+      unless base = env["hatetepe.request"]
+        raise ArgumentError, "Proxying requires env[hatetepe.request] to be set"
+      end
+      
+      uri = target.path + base.uri
+      host = "#{target.host}:#{target.port}"
+      headers = base.headers.merge({
+        "X-Forwarded-For" => env["REMOTE_ADDR"],
+        "Host" => [base.headers["Host"], host].compact.join(", ")
+      })
+      
+      Request.new(base.verb, uri, base.http_version).tap do |req|
+        req.headers = headers
+        req.body = base.body
+      end
     end
   end
 end

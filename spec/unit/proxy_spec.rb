@@ -52,10 +52,10 @@ describe Hatetepe::Proxy do
     
     before do
       URI.stub :parse => target
+      proxy.stub :build_request => request
       
       request.stub :dup => request, :response => response
       request.extend EM::Deferrable
-      env["hatetepe.request"] = request
       env["async.callback"] = callback
     end
     
@@ -92,8 +92,13 @@ describe Hatetepe::Proxy do
       request.succeed
     end
     
-    it "it passes env[hatetepe.request] to the client" do
-      client.should_receive(:<<).with env["hatetepe.request"]
+    it "passes the request to the client" do
+      proxy.should_receive :build_request do |e, t|
+        env.should equal(e)
+        target.should equal(t)
+        request
+      end
+      client.should_receive(:<<).with request
       Fiber.new { proxy.start env, target, client }.resume
     end
     
@@ -112,6 +117,43 @@ describe Hatetepe::Proxy do
       
       request.succeed
       succeeded.should be_true
+    end
+  end
+  
+  describe "#build_request(env, target)" do
+    let(:target) { URI.parse "http://localhost:3000/bar" }
+    let(:base_request) { Hatetepe::Request.new "GET", "/foo" }
+    
+    before do
+      env["hatetepe.request"] = base_request
+      env["REMOTE_ADDR"] = "123.234.123.234"
+    end
+    
+    it "fails if env[hatetepe.request] isn't set" do
+      env.delete "hatetepe.request"
+      proc { proxy.build_request env, target }.should raise_error(ArgumentError)
+    end
+    
+    it "combines the original URI with the target URI" do
+      proxy.build_request(env, target).uri.should == "/bar/foo"
+    end
+    
+    it "sets X-Forwarded-For header" do
+      xff = proxy.build_request(env, target).headers["X-Forwarded-For"]
+      env["REMOTE_ADDR"].should == xff
+    end
+    
+    it "adds the target to Host header" do
+      host = "localhost:3000"
+      proxy.build_request(env, target).headers["Host"].should == host
+      
+      base_request.headers["Host"] = host
+      host = "localhost:3000, localhost:3000"
+      proxy.build_request(env, target).headers["Host"].should == host
+    end
+    
+    it "builds a new request" do
+      proxy.build_request(env, target).should_not equal(base_request)
     end
   end
 end
