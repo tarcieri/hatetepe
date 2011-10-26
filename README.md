@@ -74,12 +74,18 @@ asynchronous response by responding with a status of `-1`.
       [-1]
     end
 
+The reactor won't block while waiting for the timer to kick in, it will
+instead process other requests meanwhile.
+
 
 Proxying
 --------
 
 Development of the Proxy functionality is still on-going - have a look at the
 `proxy` branch for details.
+
+The reactor won't block while waiting for the proxy endpoint's response,
+it will instead process other requests meanwhile.
 
 
 Response Streaming
