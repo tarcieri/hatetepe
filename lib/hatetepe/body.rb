@@ -21,7 +21,7 @@ module Hatetepe
     
     def length
       sync
-      @io.length
+      io.length
     end
     
     def empty?
@@ -29,41 +29,41 @@ module Hatetepe
     end
     
     def pos
-      @io.pos
+      io.pos
     end
     
     def rewind
-      @io.rewind
+      io.rewind
     end
     
     def close_write
-      ret = @io.close_write
+      ret = io.close_write
       succeed
       ret
     end
     
     def closed_write?
-      @io.closed_write?
+      io.closed_write?
     end
     
     def each(&block)
       @receivers << block
-      block.call @io.string.dup unless @io.string.empty?
+      block.call io.string.dup unless io.string.empty?
       sync
     end
     
     def read(*args)
       sync
-      @io.read *args
+      io.read *args
     end
     
     def gets
       sync
-      @io.gets
+      io.gets
     end
     
     def write(chunk)
-      ret = @io.write chunk
+      ret = io.write chunk
       Fiber.new {
         @receivers.each {|r| r.call chunk }
       }.resume
@@ -71,7 +71,7 @@ module Hatetepe
     end
     
     def <<(chunk)
-      ret = @io << chunk
+      ret = io << chunk
       Fiber.new {
         @receivers.each {|r| r.call chunk }
       }.resume
