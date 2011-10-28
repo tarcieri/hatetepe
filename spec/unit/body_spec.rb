@@ -98,10 +98,8 @@ describe Hatetepe::Body do
   
   context "#close_write" do
     it "forwards to io#close_write" do
-      ret = stub("return")
-      body.io.should_receive(:close_write) { ret }
-      
-      body.close_write.should equal(ret)
+      body.io.should_receive :close_write
+      body.close_write
     end
     
     it "succeeds the body" do
