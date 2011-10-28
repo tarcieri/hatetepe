@@ -38,7 +38,7 @@ module Hatetepe
         }
         
         p.on_body = proc {|chunk|
-          message.body << chunk unless message.body.closed_write?
+          message.body.write chunk unless message.body.closed_write?
         }
         
         p.on_message_complete = method(:complete)

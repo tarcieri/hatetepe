@@ -69,13 +69,5 @@ module Hatetepe
       }.resume
       ret
     end
-    
-    def <<(chunk)
-      ret = io << chunk
-      Fiber.new {
-        @receivers.each {|r| r.call chunk }
-      }.resume
-      ret
-    end
   end
 end

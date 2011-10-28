@@ -124,7 +124,7 @@ describe Hatetepe::Body do
       chunks = ["111", "222"]
       received, succeeded = [], false
       
-      body << chunks[0]
+      body.write chunks[0]
       Fiber.new {
         body.each {|chunk| received << chunk }
         succeeded = true
@@ -132,7 +132,7 @@ describe Hatetepe::Body do
       received.should == chunks.values_at(0)
       succeeded.should be_false
       
-      body << chunks[1]
+      body.write chunks[1]
       received.should == chunks
       succeeded.should be_false
       
@@ -187,15 +187,6 @@ describe Hatetepe::Body do
       body.io.should_receive(:write).with(arg) { ret }
       
       body.write(arg).should equal(ret)
-    end
-  end
-  
-  context "#<<(chunk)" do
-    it "forwards to io#<<" do
-      arg, ret = stub("arg"), stub("ret")
-      body.io.should_receive(:<<).with(arg) { ret }
-      
-      body.<<(arg).should equal(ret)
     end
   end
 end
