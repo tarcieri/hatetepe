@@ -17,6 +17,8 @@ describe Hatetepe::Body do
   context "#initialize(string)" do
     let(:body) { Hatetepe::Body.new "herp derp" }
     
+    before { body.close_write }
+    
     it "writes the passed string" do
       body.length.should equal(9)
       body.io.read.should == "herp derp"
@@ -44,8 +46,23 @@ describe Hatetepe::Body do
     let(:length) { stub "length" }
     
     it "forwards to io#length" do
+      body.stub :sync
       body.io.stub :length => length
+      
       body.length.should equal(length)
+    end
+    
+    it "waits for the body to succeed" do
+      succeeded = false
+      Fiber.new {
+        body.length
+        succeeded = true
+      }.resume
+      
+      succeeded.should be_false
+      
+      body.close_write
+      succeeded.should be_true
     end
   end
   

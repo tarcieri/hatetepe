@@ -165,7 +165,8 @@ describe Hatetepe::Parser do
       block.should_receive(:call) {|body|
         body.should equal(parser.message.body)
         
-        body.should be_empty
+        # we'd have to #close_write to get body#length
+        body.io.length.should == 0
       }
       
       parser.on_body &block

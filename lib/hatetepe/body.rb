@@ -20,7 +20,7 @@ module Hatetepe
     end
     
     def length
-      # TODO maybe I want to #sync here
+      sync
       @io.length
     end
     
