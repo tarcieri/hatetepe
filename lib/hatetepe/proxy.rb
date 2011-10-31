@@ -32,6 +32,7 @@ module Hatetepe
       end
     end
     
+    # TODO only use +env+ to build the request
     def build_request(env, target)
       unless base = env["hatetepe.request"]
         raise ArgumentError, "Proxying requires env[hatetepe.request] to be set"
