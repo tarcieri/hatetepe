@@ -81,8 +81,23 @@ instead process other requests meanwhile.
 Proxying
 --------
 
-Development of the Proxy functionality is still on-going - have a look at the
-`proxy` branch for details.
+You can easily proxy a request to another HTTP server. The response will be
+proxied back to the original client automatically. Remember to return an
+async response.
+
+    def call(env)
+      env["proxy.start"].call "http://intra.example.org/derp"
+      [-1]
+    end
+
+This will internally just call `env["proxy.callback"]` (which defaults to
+`env["async.callback"]`). So if you want to send the response yourself, just
+override `env["proxy.callback"]`.
+
+If you want to reuse proxy connections (e.g. when doing Connection Pooling),
+simply create a `Client` instance and pass it to `env["proxy.start"]`.
+
+    env["proxy.start"].call "http://intra.example.org/derp", pool.acquire
 
 The reactor won't block while waiting for the proxy endpoint's response,
 it will instead process other requests meanwhile.
@@ -94,7 +109,7 @@ Response Streaming
 Streaming a response is easy. Just make your Rack app return a `-1` status code
 and use the `stream.start`, `stream.send` and `stream.close` helpers.
 
-    proc do |env|
+    def call(env)
       EM.add_timer 0.5 do
         env["stream.start"].call [200, {"Content-Type" => "text/plain"}]
       end

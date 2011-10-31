@@ -45,6 +45,7 @@ describe Hatetepe::Server do
     it "builds the app" do
       Rack::Builder.stub :new => builder
       builder.should_receive(:use).with Hatetepe::App
+      builder.should_receive(:use).with Hatetepe::Proxy
       builder.should_receive(:run).with app
       
       server.send :initialize, config

@@ -24,7 +24,7 @@ module Hatetepe
       
       @app = Rack::Builder.new.tap {|b|
         b.use Hatetepe::App
-        #b.use Hatetepe::Proxy
+        b.use Hatetepe::Proxy
         b.run config[:app]
       }
 
