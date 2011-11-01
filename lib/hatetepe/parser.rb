@@ -19,8 +19,8 @@ module Hatetepe
     attr_reader :message
     
     def initialize(&block)
-      @parser = HTTP::Parser.new.tap {|p|
-        p.on_headers_complete = proc {
+      @parser = HTTP::Parser.new.tap do |p|
+        p.on_headers_complete = proc do
           version = p.http_version.join(".")
           if p.http_method
             @message = Request.new(p.http_method, p.request_url, version)
@@ -35,14 +35,14 @@ module Hatetepe
           
           event! :body, message.body
           nil
-        }
+        end
         
-        p.on_body = proc {|chunk|
+        p.on_body = proc do |chunk|
           message.body.write chunk unless message.body.closed_write?
-        }
+        end
         
         p.on_message_complete = method(:complete)
-      }
+      end
       
       reset
       

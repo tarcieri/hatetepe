@@ -21,24 +21,25 @@ module Hatetepe
       
       headers["User-Agent"] ||= "hatetepe/#{VERSION}"
       
-      EM::Synchrony.sync Request.new(verb, uri.request_uri).tap {|req|
+      Request.new(verb, uri.request_uri).tap do |req|
         req.headers = headers
         req.body = body || Body.new.tap {|b| b.close_write }
         client << req
-      }
+        EM::Synchrony.sync req
+      end.response
     end
     
     class << self
-      [:get, :head].each {|verb|
-        define_method(verb) {|uri, headers = {}|
+      [:get, :head].each do |verb|
+        define_method verb do |uri, headers = {}|
           request verb.to_s.upcase, uri, headers
-        }
-      }
-      [:options, :post, :put, :delete, :trace, :connect].each {|verb|
-        define_method(verb) {|uri, headers = {}, body = nil|
+        end
+      end
+      [:options, :post, :put, :delete, :trace, :connect].each do |verb|
+        define_method verb do |uri, headers = {}, body = nil|
           request verb.to_s.upcase, uri, headers, body
-        }
-      }
+        end
+      end
     end
     
     attr_reader :config
@@ -52,17 +53,17 @@ module Hatetepe
     end
     
     def post_init
-      parser.on_response {|response|
+      parser.on_response do |response|
         requests.find {|req| !req.response }.response = response
-      }
+      end
       
-      parser.on_headers {
-        requests.reverse.find {|req| !!req.response }.tap {|req|
+      parser.on_headers do
+        requests.reverse.find {|req| !!req.response }.tap do |req|
           req.succeed req.response
           # XXX do i want to treat HEAD individually?
           parser.complete if req.verb == :head
-        }
-      }
+        end
+      end
       
       #builder.on_write {|chunk|
       # ap "-> #{chunk}"
@@ -74,7 +75,7 @@ module Hatetepe
       request.headers["Host"] = "#{config[:host]}:#{config[:port]}"
 
       requests << request
-      Fiber.new {
+      Fiber.new do
         builder.request_line request.verb, request.uri
         
         if request.headers["Content-Type"] == "application/x-www-form-urlencoded"
@@ -96,7 +97,7 @@ module Hatetepe
         end
         
         builder.complete
-      }.resume
+      end.resume
     end
     
     def receive_data(data)

@@ -98,7 +98,7 @@ module Hatetepe
     # Immediately yields all data that has already arrived. Blocks until the
     # Body is write-closed and yields for each call to #write until then.
     #
-    # @yield [String] Block to execute for each incoming data chunk
+    # @yield [String] Block to execute for each incoming data chunk.
     #
     # @return [undefined]
     def each(&block)
@@ -152,15 +152,15 @@ module Hatetepe
     # number of bytes written.
     #
     # @param [String] data
-    #   The data to append
+    #   The data to append.
     #
     # @return [Fixnum]
     #   The number of bytes written.
     def write(data)
       ret = io.write data
-      Fiber.new {
+      Fiber.new do
         @receivers.each {|r| r.call data }
-      }.resume
+      end.resume
       ret
     end
   end

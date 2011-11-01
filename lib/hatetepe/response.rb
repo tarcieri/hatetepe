@@ -13,8 +13,8 @@ module Hatetepe
       [status, headers, body]
     end
     
-    def [](i)
-      to_a[i]
+    def [](idx)
+      to_a[idx]
     end
   end
 end

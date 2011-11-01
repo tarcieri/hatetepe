@@ -18,16 +18,16 @@ module Hatetepe
         "rack.input" => body,
         "REQUEST_METHOD" => verb.dup,
         "REQUEST_URI" => uri.dup
-      }.tap {|hsh|
-        headers.each {|key, value|
+      }.tap do |hsh|
+        headers.each do |key, value|
           key = key.upcase.gsub! /[^A-Z]/, "_"
           key = "HTTP_#{key}" unless key =~ /^CONTENT_(TYPE|LENGTH)$/
-          hsh[key] = value
-        }
+          hsh[key] = value.dup
+        end
 
         hsh["REQUEST_PATH"], qm, hsh["QUERY_STRING"] = uri.partition("?")
         hsh["PATH_INFO"], hsh["SCRIPT_NAME"] = hsh["REQUEST_PATH"].dup, ""
-      }
+      end
     end
   end
 end

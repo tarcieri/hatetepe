@@ -17,7 +17,7 @@ module Hatetepe
     # Initializes a new App object.
     #
     # @param [#call] app
-    #   The Rack app
+    #   The Rack app.
     #
     def initialize(app)
       @app = app
@@ -30,34 +30,39 @@ module Hatetepe
     # 500 response if the Rack app raises an error.
     #
     # @param [Hash] env
-    #   The Rack environment
+    #   The Rack environment.
     #
     def call(env)
-      env["async.callback"] = proc {|response|
+      env["async.callback"] = proc do |response|
         postprocess env, response
-      }
+      end
       
       response = ASYNC_RESPONSE
-      catch(:async) {
+      catch :async do
         response = app.call(env) rescue ERROR_RESPONSE
-      }
+      end
+      
       postprocess env, response
     end
     
     # Sends the response.
     #
     # Does nothing if response status is indicating an asynchronous response.
-    # This is the case if the response Array's first element equals -1.
+    # This is the case if the response +Array+'s first element equals -1.
     # Otherwise it will start sending the response (status and headers).
     #
     # If the body indicates streaming it will return after sending the status
-    # and headers. This happens if the body equals Rack::STREAMING. Otherwise
-    # it sends each body chunk and then closes the response stream.
+    # and headers. This happens if the body equals +Rack::STREAMING+ or isn't
+    # set. Otherwise it sends each body chunk and then closes the response
+    # stream.
+    #
+    # Sending an empty body is as simple as passing an object that responds to
+    # +each+ but doesn't actually yield anything.
     #
     # @param [Hash] env
-    #   The Rack environment
+    #   The Rack environment.
     # @param [Array] response
-    #   An array of 1..3 length containing the status, headers, body
+    #   An array of 1..3 length containing the status, headers, body.
     #
     def postprocess(env, response)
       return if response[0] == ASYNC_RESPONSE[0]
@@ -66,7 +71,7 @@ module Hatetepe
       return if !response[2] || response[2] == Rack::STREAMING
       
       begin
-        response[2].each {|chunk| env["stream.send"].call chunk }
+        response[2].each &env["stream.send"]
       ensure
         env["stream.close"].call
       end

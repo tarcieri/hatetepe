@@ -158,9 +158,9 @@ module Hatetepe
     def error(message)
       exception = BuilderError.new(message)
       unless on_error.empty?
-        on_error.each {|blk| blk.call(exception) }
+        on_error.each {|blk| blk.call exception }
       else
-        raise(exception)
+        raise exception
       end
     end
   end
