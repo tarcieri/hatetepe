@@ -63,7 +63,7 @@ module Hatetepe
       return if response[0] == ASYNC_RESPONSE[0]
       
       env["stream.start"].call response[0..1]
-      return if response[2] == Rack::STREAMING
+      return if !response[2] || response[2] == Rack::STREAMING
       
       begin
         response[2].each {|chunk| env["stream.send"].call chunk }

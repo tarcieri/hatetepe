@@ -5,14 +5,15 @@ require "rack"
 require "hatetepe/app"
 require "hatetepe/builder"
 require "hatetepe/parser"
+require "hatetepe/pipeline"
+require "hatetepe/proxy"
 require "hatetepe/request"
 require "hatetepe/version"
 
 module Hatetepe
   class Server < EM::Connection
     def self.start(config)
-      server = EM.start_server(config[:host], config[:port], self, config)
-      #Prefork.run server if config[:prefork]
+      EM.start_server config[:host], config[:port], self, config
     end
     
     attr_reader :app, :config, :errors
@@ -21,12 +22,13 @@ module Hatetepe
     def initialize(config)
       @config = config
       @errors = config[:errors] || $stderr
-      
-      @app = Rack::Builder.new.tap {|b|
-        b.use Hatetepe::App
-        b.use Hatetepe::Proxy
-        b.run config[:app]
-      }
+
+      @app = Rack::Builder.app do
+        use Hatetepe::Pipeline
+        use Hatetepe::App
+        use Hatetepe::Proxy
+        run config[:app]
+      end
 
       super
     end
@@ -53,49 +55,53 @@ module Hatetepe
     end
     
     def process(*)
-      previous, request = requests.values_at(-2, -1)
+      request = requests.last
       
-      env = request.to_hash.tap {|e|
-        e["hatetepe.connection"] = self
-        e["rack.url_scheme"] = "http"
-        e["rack.input"].source = self
-        e["rack.errors"] = errors
-        
-        e["rack.multithread"] = false
-        e["rack.multiprocess"] = false
-        e["rack.run_once"] = false
-        
-        e["SERVER_NAME"] = config[:host].dup
-        e["SERVER_PORT"] = String(config[:port])
-        
-        host = e["HTTP_HOST"] || config[:host].dup
-        host += ":#{config[:port]}" unless host.include? ":"
-        e["HTTP_HOST"] = host
-        
-        e["stream.start"] = proc {|response|
+      env = request.to_hash.tap do |e|
+        inject_environment e
+        e["stream.start"] = proc do |response|
           e.delete "stream.start"
-          EM::Synchrony.sync previous if previous
-          
-          builder.response_line response[0]
-          response[1]["Server"] = "hatetepe/#{VERSION}"
-          builder.headers response[1]
-        }
-        
+          start_response response
+        end
         e["stream.send"] = builder.method(:body_chunk)
-        
-        e["stream.close"] = proc {
+        e["stream.close"] = proc do
+          e.delete "stream.start"
           e.delete "stream.send"
-          e.delete "stream.close"
-          
-          builder.complete
-          requests.delete request
-          request.succeed
-          
-          close_connection_after_writing if requests.empty?
-        }
-      }
+          close_response request
+        end
+      end
       
       Fiber.new { app.call env }.resume
+    end
+    
+    def start_response(response)
+      builder.response_line response[0]
+      response[1]["Server"] = "hatetepe/#{VERSION}"
+      builder.headers response[1]
+    end
+    
+    def close_response(request)
+      builder.complete
+      requests.delete request
+      close_connection_after_writing if requests.empty?
+    end
+      
+    def inject_environment(env)
+      env["hatetepe.connection"] = self
+      env["rack.url_scheme"] = "http"
+      env["rack.input"].source = self
+      env["rack.errors"] = errors
+      
+      env["rack.multithread"] = false
+      env["rack.multiprocess"] = false
+      env["rack.run_once"] = false
+      
+      env["SERVER_NAME"] = config[:host].dup
+      env["SERVER_PORT"] = String(config[:port])
+      
+      host = env["HTTP_HOST"] || config[:host].dup
+      host += ":#{config[:port]}" unless host.include? ":"
+      env["HTTP_HOST"] = host
     end
   end
 end
