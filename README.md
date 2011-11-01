@@ -14,7 +14,7 @@ automatic JSON or form-data encoding, have a look at
 [Hatetepe adapter](https://github.com/lgierth/faraday/tree/hatetepe-support)
 for it being worked on.
 
-[![Build status](https://secure.travis-ci.org/lgierth/hatetepe.png)](http://travis-ci.org/lgierth/hatetepe)
+[![Build status](https://secure.travis-ci.org/lgierth/hatetepe.png?branch=master)](http://travis-ci.org/lgierth/hatetepe)
 
 
 Getting Started (Server)
