@@ -60,8 +60,6 @@ module Hatetepe
       parser.on_headers do
         requests.reverse.find {|req| !!req.response }.tap do |req|
           req.succeed req.response
-          # XXX do i want to treat HEAD individually?
-          parser.complete if req.verb == :head
         end
       end
       
