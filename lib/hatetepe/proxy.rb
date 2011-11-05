@@ -27,12 +27,12 @@ module Hatetepe
       build_request(env, target).tap do |req|
         cl << req
         EM::Synchrony.sync req
-        cl.stop unless client
+        req.response.body.callback { cl.stop } unless client
         env["proxy.callback"].call req.response
       end
     end
     
-    # TODO only use +env+ to build the request
+    # TODO use only +env+ to build the request
     def build_request(env, target)
       unless base = env["hatetepe.request"]
         raise ArgumentError, "Proxying requires env[hatetepe.request] to be set"

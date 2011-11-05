@@ -104,6 +104,7 @@ module Hatetepe
     end
     
     def stop
+      responses.last.body.sync
       close_connection_after_writing
     end
     
