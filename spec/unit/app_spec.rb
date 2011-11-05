@@ -6,9 +6,9 @@ describe Hatetepe::App do
   let(:app) { Hatetepe::App.new inner_app }
   let(:env) {
     {
-      "stream.start" => stub("stream.start", :call => nil),
-      "stream.send" => stub("stream.send", :call => nil),
-      "stream.close" => stub("stream.close", :call => nil)
+      "stream.start" => proc {},
+      "stream.send" => proc {},
+      "stream.close" => proc {}
     }
   }
   
@@ -81,14 +81,20 @@ describe Hatetepe::App do
     end
     
     it "streams the body" do
-      env["stream.send"].should_receive(:call).with(body[0])
-      env["stream.send"].should_receive(:call).with(body[1])
+      body.should_receive :each do |&blk|
+        blk.should equal(env["stream.send"])
+      end
       app.postprocess env, [status, headers, body]
     end
     
     it "doesn't stream the body if it equals Rack::STREAMING" do
-      env["stream.send"].should_not_receive :call
+      body.should_not_receive :each
       app.postprocess env, [status, headers, Rack::STREAMING]
+    end
+    
+    it "doesn't try to stream a body that isn't set" do
+      body.should_not_receive :each
+      app.postprocess env, [status, headers]
     end
     
     it "closes the response stream after streaming the body" do
