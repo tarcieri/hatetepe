@@ -40,16 +40,18 @@ describe Hatetepe::Server do
   
   context "#initialize(config)" do
     let(:server) { Hatetepe::Server.allocate }
-    let(:builder) { stub "app builder" }
+    let(:builder) { stub "app builder", :to_app => to_app }
+    let(:to_app) { stub "to_app" }
 
     it "builds the app" do
       Rack::Builder.stub :new => builder
+      builder.should_receive(:use).with Hatetepe::Pipeline
       builder.should_receive(:use).with Hatetepe::App
       builder.should_receive(:use).with Hatetepe::Proxy
       builder.should_receive(:run).with app
       
       server.send :initialize, config
-      server.app.should equal(builder)
+      server.app.should equal(to_app)
     end
     
     it "sets up the error stream" do

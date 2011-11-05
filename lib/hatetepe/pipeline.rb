@@ -1,4 +1,5 @@
 module Hatetepe
+  # TODO move specs from server_spec.rb to pipeline_spec.rb
   class Pipeline
     attr_reader :app
     

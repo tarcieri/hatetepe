@@ -23,12 +23,12 @@ module Hatetepe
       @config = config
       @errors = config[:errors] || $stderr
 
-      @app = Rack::Builder.app do
-        use Hatetepe::Pipeline
-        use Hatetepe::App
-        use Hatetepe::Proxy
-        run config[:app]
-      end
+      @app = Rack::Builder.new.tap do |b|
+        b.use Hatetepe::Pipeline
+        b.use Hatetepe::App
+        b.use Hatetepe::Proxy
+        b.run config[:app]
+      end.to_app
 
       super
     end
@@ -65,8 +65,8 @@ module Hatetepe
         end
         e["stream.send"] = builder.method(:body_chunk)
         e["stream.close"] = proc do
-          e.delete "stream.start"
           e.delete "stream.send"
+          e.delete "stream.close"
           close_response request
         end
       end
