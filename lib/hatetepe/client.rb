@@ -59,6 +59,7 @@ module Hatetepe
       
       parser.on_headers do
         requests.reverse.find {|req| !!req.response }.tap do |req|
+          req.response.body.source = self
           req.succeed req.response
         end
       end
