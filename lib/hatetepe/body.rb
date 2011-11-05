@@ -158,9 +158,9 @@ module Hatetepe
     #   The number of bytes written.
     def write(data)
       ret = io.write data
-      Fiber.new do
-        @receivers.each {|r| r.call data }
-      end.resume
+      @receivers.each do |r|
+        Fiber.new { r.call data }.resume
+      end
       ret
     end
   end
