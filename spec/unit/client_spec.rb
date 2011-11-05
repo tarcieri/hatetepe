@@ -162,7 +162,7 @@ describe Hatetepe::Client do
         }
       }
     }
-    let(:response) { stub "response" }
+    let(:response) { stub "response", :body => Hatetepe::Body.new }
     
     before {
       client.post_init
@@ -246,25 +246,8 @@ describe Hatetepe::Client do
   
   context "#stop" do
     it "closes the connection" do
-      client.should_receive :close_connection_after_writing
+      client.should_receive :close_connection
       client.stop
-    end
-  end
-  
-  context "#responses" do
-    let(:requests) {
-      4.times.map {|i| stub "request##{i}", :response => responses[i] }
-    }
-    let(:responses) {
-      2.times.map {|i| stub "response##{i}" }
-    }
-    
-    before {
-      client.stub :requests => requests
-    }
-    
-    it "returns all requests' responses" do
-      client.responses.should == responses
     end
   end
 end

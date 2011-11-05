@@ -105,12 +105,7 @@ module Hatetepe
     end
     
     def stop
-      responses.last.body.sync
-      close_connection_after_writing
-    end
-    
-    def responses
-      requests.map(&:response).compact
+      close_connection
     end
   end
 end
