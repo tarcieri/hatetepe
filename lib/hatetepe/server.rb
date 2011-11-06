@@ -98,10 +98,26 @@ module Hatetepe
       
       env["SERVER_NAME"] = config[:host].dup
       env["SERVER_PORT"] = String(config[:port])
+      env["REMOTE_ADDR"] = remote_address.dup
+      env["REMOTE_PORT"] = String(remote_port)
       
       host = env["HTTP_HOST"] || config[:host].dup
       host += ":#{config[:port]}" unless host.include? ":"
       env["HTTP_HOST"] = host
+    end
+    
+    def remote_address
+      sockaddr && sockaddr[1]
+    end
+    
+    def remote_port
+      sockaddr && sockaddr[0]
+    end
+    
+    private
+    
+    def sockaddr
+      @sockaddr ||= Socket.unpack_sockaddr_in(get_peername) rescue nil
     end
   end
 end

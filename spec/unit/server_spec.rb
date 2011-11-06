@@ -29,6 +29,8 @@ describe Hatetepe::Server do
     }
   }
   
+  before { server.stub :sockaddr => [42424, "127.0.42.1"] }
+  
   context ".start(config)" do
     it "starts an EventMachine server" do
       args = [host, port, Hatetepe::Server, config]
@@ -135,6 +137,9 @@ describe Hatetepe::Server do
         e["SERVER_NAME"].should == host
         e["SERVER_NAME"].should_not equal(host)
         e["SERVER_PORT"].should == String(port)
+        e["REMOTE_ADDR"].should == server.remote_address
+        e["REMOTE_ADDR"].should_not equal(server.remote_address)
+        e["REMOTE_PORT"].should == String(server.remote_port)
         e["HTTP_HOST"].should == "#{host}:#{port}"
         
         [-1]
@@ -256,6 +261,18 @@ describe Hatetepe::Server do
         [-1]
       }
       server.process
+    end
+  end
+  
+  describe "#remote_address" do
+    it "returns the client's IP address" do
+      server.remote_address.should == "127.0.42.1"
+    end
+  end
+  
+  describe "#remote_port" do
+    it "returns the client connection's port" do
+      server.remote_port.should == 42424
     end
   end
 end
