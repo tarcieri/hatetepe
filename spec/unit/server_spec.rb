@@ -244,15 +244,6 @@ describe Hatetepe::Server do
       server.process
     end
     
-    it "closes the connection if there are no more requests" do
-      server.should_receive(:close_connection).with true
-      app.stub(:call) {|e|
-        e["stream.close"].call
-        [-1]
-      }
-      server.process
-    end
-    
     it "deletes itself and stream.send from env[] to prevent multiple calls" do
       app.stub(:call) {|e|
         e["stream.close"].call
