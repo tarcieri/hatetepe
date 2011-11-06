@@ -41,7 +41,7 @@ module Hatetepe
       uri = target.path + base.uri
       host = "#{target.host}:#{target.port}"
       headers = base.headers.merge({
-        "X-Forwarded-For" => env["REMOTE_ADDR"],
+        #"X-Forwarded-For" => env["REMOTE_ADDR"],
         "Host" => [base.headers["Host"], host].compact.join(", ")
       })
       
