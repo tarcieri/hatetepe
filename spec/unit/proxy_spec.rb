@@ -133,20 +133,6 @@ describe Hatetepe::Proxy do
       proxy.build_request(env, target).uri.should == "/bar/foo"
     end
     
-    it "sets X-Forwarded-For header" do
-      xff = proxy.build_request(env, target).headers["X-Forwarded-For"]
-      env["REMOTE_ADDR"].should == xff
-    end
-    
-    it "adds the target to Host header" do
-      host = "localhost:3000"
-      proxy.build_request(env, target).headers["Host"].should == host
-      
-      base_request.headers["Host"] = host
-      host = "localhost:3000, localhost:3000"
-      proxy.build_request(env, target).headers["Host"].should == host
-    end
-    
     it "builds a new request" do
       proxy.build_request(env, target).should_not equal(base_request)
     end
