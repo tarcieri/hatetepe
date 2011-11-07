@@ -1,9 +1,9 @@
 require "spec_helper"
-require "hatetepe/app"
+require "hatetepe/server"
 
-describe Hatetepe::App do
+describe Hatetepe::Server::App do
   let(:inner_app) { stub "inner app", :call => response }
-  let(:app) { Hatetepe::App.new inner_app }
+  let(:app) { Hatetepe::Server::App.new inner_app }
   let(:env) {
     {
       "stream.start" => proc {},
@@ -19,7 +19,7 @@ describe Hatetepe::App do
   
   context "#initialize(inner_app)" do
     it "keeps the inner app" do
-      Hatetepe::App.new(inner_app).app.should equal(inner_app)
+      Hatetepe::Server::App.new(inner_app).app.should equal(inner_app)
     end
   end
   

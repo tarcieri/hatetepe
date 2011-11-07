@@ -1,16 +1,16 @@
 require "spec_helper"
-require "hatetepe/proxy"
+require "hatetepe/server"
 
-describe Hatetepe::Proxy do
+describe Hatetepe::Server::Proxy do
   let(:app) { stub "app" }
   
   describe "#initialize(app)" do
     it "sets the app" do
-      Hatetepe::Proxy.new(app).app.should equal(app)
+      Hatetepe::Server::Proxy.new(app).app.should equal(app)
     end
   end
   
-  let(:proxy) { Hatetepe::Proxy.new app }
+  let(:proxy) { Hatetepe::Server::Proxy.new app }
   let(:target) { stub "target" }
   let(:env) { {} }
   let(:client) { stub "client", :<< => nil }

@@ -1,5 +1,7 @@
-module Hatetepe
-  # TODO move specs from server_spec.rb to pipeline_spec.rb
+require "em-synchrony"
+
+class Hatetepe::Server
+  # TODO move specs from server_spec.rb to server/pipeline_spec.rb
   class Pipeline
     attr_reader :app
     

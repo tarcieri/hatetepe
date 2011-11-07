@@ -3,7 +3,7 @@ require "rack"
 
 Rack::STREAMING = "Rack::STREAMING"
 
-module Hatetepe
+class Hatetepe::Server
   ASYNC_RESPONSE = [-1, {}, []].freeze
   
   ERROR_RESPONSE = [500, {"Content-Type" => "text/html"},

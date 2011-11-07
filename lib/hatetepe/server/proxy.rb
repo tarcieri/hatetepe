@@ -2,7 +2,7 @@ require "hatetepe/client"
 require "hatetepe/request"
 require "uri"
 
-module Hatetepe
+class Hatetepe::Server
   class Proxy
     attr_reader :app
     
@@ -23,7 +23,8 @@ module Hatetepe
       
       env["proxy.callback"] ||= env["async.callback"]
       
-      cl = client || Client.start(:host => target.host, :port => target.port)
+      cl = client || Hatetepe::Client.start(:host => target.host,
+                                            :port => target.port)
       build_request(env, target).tap do |req|
         cl << req
         EM::Synchrony.sync req
@@ -40,7 +41,7 @@ module Hatetepe
       
       uri = target.path + base.uri
       host = "#{target.host}:#{target.port}"
-      Request.new(base.verb, uri, base.http_version).tap do |req|
+      Hatetepe::Request.new(base.verb, uri, base.http_version).tap do |req|
         req.headers = base.headers.merge("Host" => host)
         req.body = base.body
       end
