@@ -20,7 +20,7 @@ module Hatetepe
         "REQUEST_URI" => uri.dup
       }.tap do |hsh|
         headers.each do |key, value|
-          key = key.upcase.gsub! /[^A-Z]/, "_"
+          key = key.upcase.gsub /[^A-Z]/, "_"
           key = "HTTP_#{key}" unless key =~ /^CONTENT_(TYPE|LENGTH)$/
           hsh[key] = value.dup
         end
