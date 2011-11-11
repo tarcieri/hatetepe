@@ -1,111 +1,119 @@
 require "em-synchrony"
 require "eventmachine"
+require "rack"
 require "uri"
 
-require "hatetepe/body"
 require "hatetepe/builder"
 require "hatetepe/parser"
 require "hatetepe/request"
-require "hatetepe/response"
 require "hatetepe/version"
 
 module Hatetepe
-  class Client < EM::Connection
-    def self.start(config)
+  class Client < EM::Connection; end
+end
+
+require "hatetepe/client/pipeline"
+
+class Hatetepe::Client
+  attr_reader :app, :config
+  attr_reader :parser, :builder
+  attr_reader :requests, :pending_requests, :pending_responses
+  
+  def initialize(config)
+    @config = config
+    @parser,  @builder = Hatetepe::Parser.new, Hatetepe::Builder.new
+    
+    @requests = []
+    @pending_requests, @pending_responses = {}, {}
+    
+    @app = Rack::Builder.new.tap do |b|
+      b.use Pipeline
+      b.run method(:send_request)
+    end.to_app
+    
+    super
+  end
+  
+  def post_init
+    parser.on_response << method(:receive_response)
+    builder.on_write << method(:send_data)
+    #builder.on_write {|data| p "--> #{data}" }
+  end
+  
+  def receive_data(data)
+    #p "<-- #{data}"
+    parser << data
+  rescue => e
+    stop!
+    raise e
+  end
+  
+  def send_request(request)
+    id = request.object_id
+    
+    builder.request request.to_a
+    pending_requests[id].succeed
+    
+    pending_responses[id] = EM::DefaultDeferrable.new
+    EM::Synchrony.sync pending_responses[id]
+  ensure
+    pending_responses.delete id
+  end
+  
+  def receive_response(response)
+    id = requests.find {|req| !req.response }.object_id
+    pending_responses[id].succeed response
+  end
+  
+  def <<(request)
+    Fiber.new do
+      request.connection = self
+      requests << request
+      pending_requests[request.object_id] = EM::DefaultDeferrable.new
+      
+      request.response = app.call(request)
+      request.succeed request.response
+    end.resume
+  end
+  
+  def request(verb, uri, headers = {}, body = nil)
+    headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
+    
+    request = Hatetepe::Request.new(verb, uri, headers, body)
+    request.body.close_write unless body
+    
+    self << request
+    EM::Synchrony.sync request
+    request.response
+  end
+  
+  def stop
+    EM::Synchrony.sync requests.last unless requests.empty?
+    stop!
+  end
+  
+  def stop!
+    close_connection
+  end
+  
+  class << self
+    def start(config)
       EM.connect config[:host], config[:port], self, config
     end
     
-    def self.request(verb, uri, headers = {}, body = nil)
+    def request(verb, uri, headers = {}, body = nil)
       uri = URI.parse(uri)
       client = start(:host => uri.host, :port => uri.port)
       
-      headers["User-Agent"] ||= "hatetepe/#{VERSION}"
-      
-      Request.new(verb, uri.request_uri).tap do |req|
-        req.headers = headers
-        req.body = body || Body.new.tap {|b| b.close_write }
-        client << req
-        EM::Synchrony.sync req
-      end.response
-    end
-    
-    class << self
-      [:get, :head].each do |verb|
-        define_method verb do |uri, headers = {}|
-          request verb.to_s.upcase, uri, headers
-        end
-      end
-      [:options, :post, :put, :delete, :trace, :connect].each do |verb|
-        define_method verb do |uri, headers = {}, body = nil|
-          request verb.to_s.upcase, uri, headers, body
-        end
+      client.request(verb, uri.request_uri, headers, body).tap do |response|
+        response.body.callback { client.stop }
       end
     end
-    
-    attr_reader :config
-    attr_reader :requests, :parser, :builder
-    
-    def initialize(config)
-      @config = config
-      @requests = []
-      @parser, @builder = Parser.new, Builder.new
-      super
-    end
-    
-    def post_init
-      parser.on_response do |response|
-        requests.find {|req| !req.response }.response = response
-      end
-      
-      parser.on_headers do
-        requests.reverse.find {|req| !!req.response }.tap do |req|
-          req.response.body.source = self
-          req.succeed req.response
-        end
-      end
-      
-      #builder.on_write {|chunk|
-      #  ap "-> #{chunk}"
-      #}
-      builder.on_write << method(:send_data)
-    end
-    
-    def <<(request)
-      request.headers["Host"] = "#{config[:host]}:#{config[:port]}"
-
-      requests << request
-      Fiber.new do
-        builder.request_line request.verb, request.uri
-        
-        if request.headers["Content-Type"] == "application/x-www-form-urlencoded"
-          if request.body.respond_to? :read
-            request.headers["Content-Length"] = request.body.read.bytesize
-          else
-            request.headers["Content-Length"] = request.body.length
-          end
-        end
-        builder.headers request.headers
-        
-        b = request.body
-        if Body === b || b.respond_to?(:each)
-          builder.body b
-        elsif b.respond_to? :read
-          builder.body [b.read]
-        else
-          builder.body [b]
-        end
-        
-        builder.complete
-      end.resume
-    end
-    
-    def receive_data(data)
-      #ap "<- #{data}"
-      parser << data
-    end
-    
-    def stop
-      close_connection
+  end
+  
+  [self, self.singleton_class].each do |cls|
+    [:get, :head, :post, :put, :delete].each do |verb|
+      cls.send(:define_method, verb) {|uri, *args| request verb, uri, *args }
     end
   end
 end
