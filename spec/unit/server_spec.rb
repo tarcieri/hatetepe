@@ -9,7 +9,7 @@ describe Hatetepe::Server do
       s.requests << request
     }
   }
-  let(:request) { stub "request", :to_hash => env }
+  let(:request) { stub "request", :to_h => env }
   let(:env) {
     {
       "rack.input" => Hatetepe::Body.new
