@@ -86,6 +86,7 @@ class Hatetepe::Server
   def close_response(request)
     builder.complete
     requests.delete request
+    close_connection_after_writing if requests.empty?
   end
     
   def inject_environment(env)
