@@ -88,7 +88,10 @@ class Hatetepe::Client
   end
   
   def stop
-    EM::Synchrony.sync requests.last unless requests.empty?
+    unless requests.empty?
+      last_response = EM::Synchrony.sync(requests.last)
+      EM::Synchrony.sync last_response.body
+    end
     stop!
   end
   
