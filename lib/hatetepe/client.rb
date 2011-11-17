@@ -17,14 +17,14 @@ require "hatetepe/client/pipeline"
 class Hatetepe::Client
   attr_reader :app, :config
   attr_reader :parser, :builder
-  attr_reader :requests, :pending_requests, :pending_responses
+  attr_reader :requests, :pending_transmission, :pending_response
   
   def initialize(config)
     @config = config
     @parser,  @builder = Hatetepe::Parser.new, Hatetepe::Builder.new
     
     @requests = []
-    @pending_requests, @pending_responses = {}, {}
+    @pending_transmission, @pending_response = {}, {}
     
     @app = Rack::Builder.new.tap do |b|
       b.use Pipeline
@@ -52,27 +52,31 @@ class Hatetepe::Client
     id = request.object_id
     
     builder.request request.to_a
-    pending_requests[id].succeed
+    pending_transmission[id].succeed
     
-    pending_responses[id] = EM::DefaultDeferrable.new
-    EM::Synchrony.sync pending_responses[id]
+    pending_response[id] = EM::DefaultDeferrable.new
+    EM::Synchrony.sync pending_response[id]
   ensure
-    pending_responses.delete id
+    pending_response.delete id
   end
   
   def receive_response(response)
     id = requests.find {|req| !req.response }.object_id
-    pending_responses[id].succeed response
+    pending_response[id].succeed response
   end
   
   def <<(request)
     Fiber.new do
       request.connection = self
       requests << request
-      pending_requests[request.object_id] = EM::DefaultDeferrable.new
-      
-      request.response = app.call(request)
-      request.succeed request.response
+      begin
+        pending_transmission[request.object_id] = EM::DefaultDeferrable.new
+        
+        request.response = app.call(request)
+        request.succeed request.response
+      ensure
+        pending_transmission.delete request.object_id
+      end
     end.resume
   end
   
@@ -115,7 +119,8 @@ class Hatetepe::Client
   end
   
   [self, self.singleton_class].each do |cls|
-    [:get, :head, :post, :put, :delete].each do |verb|
+    [:get, :head, :post, :put, :delete,
+     :options, :trace, :connect].each do |verb|
       cls.send(:define_method, verb) {|uri, *args| request verb, uri, *args }
     end
   end
