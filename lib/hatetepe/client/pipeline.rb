@@ -11,7 +11,7 @@ class Hatetepe::Client
     def call(request)
       previous = request.connection.requests[-2]
       lock = request.connection.pending_transmission[previous.object_id]
-      EM::Synchrony.sync lock if previous != request && defer
+      EM::Synchrony.sync lock if previous != request && lock
       
       app.call request
     end

@@ -73,7 +73,8 @@ class Hatetepe::Client
         pending_transmission[request.object_id] = EM::DefaultDeferrable.new
         
         request.response = app.call(request)
-        request.succeed request.response
+        m = request.response.success? ? :succeed : :fail
+        request.send m, request.response
       ensure
         pending_transmission.delete request.object_id
       end
