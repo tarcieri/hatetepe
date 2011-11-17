@@ -9,7 +9,7 @@ describe Hatetepe::Client do
   
   let(:request) { stub "request", :response => nil, :to_a => request_as_array }
   let(:request_as_array) { stub "request_as_array" }
-  let(:response) { stub "response" }
+  let(:response) { Hatetepe::Response.new 200 }
   
   describe "#initialize(config)" do
     it "sets the config" do
@@ -126,10 +126,63 @@ describe Hatetepe::Client do
   end
   
   describe "#<<(request)" do
-    it ""
+    let(:fiber) { stub "fiber", :resume => nil }
+    let(:app) { stub "app", :call => response }
+    
+    before do
+      request.stub :connection= => nil, :response= => nil, :succeed => nil
+      client.stub :app => app
+      Fiber.stub(:new) {|blk| blk.call; fiber }
+    end
+    
+    it "sets the request's connection" do
+      request.should_receive(:connection=).with client
+      client << request
+    end
+    
+    it "adds the request to the requests list" do
+      client << request
+      client.requests.last.should equal(request)
+    end
+    
+    it "adds the request to the pending transmission list" do
+      app.should_receive :call do |req|
+        client.pending_transmission[req.object_id].should respond_to(:succeed)
+      end
+      client << request
+    end
+    
+    it "calls the app" do
+      app.should_receive(:call).with request
+      client << request
+    end
+    
+    it "sets the response" do
+      request.should_receive(:response=).with response
+      client << request
+    end
+    
+    it "succeeds the request if the response status indicates success" do
+      request.should_receive(:succeed).with response
+      client << request
+    end
+    
+    it "fails the request if the response status indicates failure" do
+      response.status = 403
+      request.should_receive(:fail).with response
+      client << request
+    end
+    
+    it "makes sure the request gets remove from the pending transmission list" do
+      app.should_receive(:call).and_raise StandardError
+      client << request rescue nil
+      client.pending_transmission.should be_empty
+    end
   end
   
-  describe "#request(verb, uri, headers, body)"
+  describe "#request(verb, uri, headers, body)" do
+    it ""
+  end
   
   describe "#stop" do
     before do
@@ -163,11 +216,9 @@ describe Hatetepe::Client do
   [:get, :head, :post, :put, :delete,
    :options, :trace, :connect].each do |verb|
      describe "##{verb}(uri, headers, body)" do
-       it ""
      end
      
      describe ".#{verb}(uri, headers, body)" do
-       it ""
      end
    end
 end
