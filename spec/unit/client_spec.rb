@@ -7,8 +7,12 @@ describe Hatetepe::Client do
   end
   let(:config) { stub "config" }
   
+  let(:uri) { "http://example.net:8080/foo" }
+  let(:parsed_uri) { URI.parse uri }
   let(:request) { stub "request", :response => nil, :to_a => request_as_array }
   let(:request_as_array) { stub "request_as_array" }
+  let(:headers) { {} }
+  let(:body) { stub "body" }
   let(:response) { Hatetepe::Response.new 200 }
   
   describe "#initialize(config)" do
@@ -181,7 +185,56 @@ describe Hatetepe::Client do
   end
   
   describe "#request(verb, uri, headers, body)" do
-    it ""
+    before do
+      EM::Synchrony.stub :sync
+      client.stub :<<
+    end
+    
+    it "sets the User-Agent header" do
+      client.should_receive :<< do |request|
+        request.headers["User-Agent"].should == "hatetepe/#{Hatetepe::VERSION}"
+      end
+      client.request :get, uri
+    end
+    
+    let(:user_agent) { stub "user-agent" }
+    
+    it "doesn't override an existing User-Agent header" do
+      client.should_receive :<< do |request|
+        request.headers["User-Agent"].should equal(user_agent)
+      end
+      client.request :get, uri, "User-Agent" => user_agent
+    end
+    
+    it "closes the body if no body data was passed" do
+      Hatetepe::Body.any_instance.should_receive :close_write
+      client.request :get, uri
+    end
+    
+    it "doesn't close the body body data was passed" do
+      body.should_not_receive :close_write
+      client.request :get, uri, {}, body
+    end
+    
+    it "passes the request to #<<" do
+      client.should_receive :<< do |request|
+        request.verb.should == "GET"
+        request.uri.should == uri
+        request.headers.should == headers
+        request.body.should == body
+      end
+      client.request :get, uri, headers, body
+    end
+    
+    it "waits until the requests succeeds" do
+      EM::Synchrony.should_receive(:sync).with kind_of(Hatetepe::Request)
+      client.request :get, uri
+    end
+    
+    it "returns the response" do
+      Hatetepe::Request.any_instance.stub :response => response
+      client.request(:get, uri).should equal(response)
+    end
   end
   
   describe "#stop" do
@@ -208,17 +261,61 @@ describe Hatetepe::Client do
   end
   
   describe ".start(config)" do
-    it ""
+    let(:config) { {:host => "0.0.0.0", :port => 1234} }
+    let(:client) { stub "client" }
+    
+    it "starts an EventMachine connection and returns it" do
+      EM.should_receive(:connect).with(config[:host], config[:port],
+                                       Hatetepe::Client, config) { client }
+      Hatetepe::Client.start(config).should equal(client)
+    end
   end
   
-  describe ".request(verb, uri, headers, body)"
+  describe ".request(verb, uri, headers, body)" do
+    let(:client) { stub "client" }
+    
+    before do
+      Hatetepe::Client.stub :start => client
+      client.stub :request => response
+    end
+    
+    it "starts a client" do
+      Hatetepe::Client.should_receive(:start).with :host => parsed_uri.host,
+                                                   :port => parsed_uri.port
+      Hatetepe::Client.request :get, uri
+    end
+    
+    it "feeds the request into the client and returns the response" do
+      client.should_receive(:request).with(:get, parsed_uri.request_uri,
+                                           headers, body) { response }
+      Hatetepe::Client.request(:get, uri, headers, body).should equal(response)
+    end
+    
+    it "stops the client when the response has finished" do
+      response.body.should_receive :callback do |&blk|
+        client.should_receive :stop
+        blk.call
+      end
+      Hatetepe::Client.request :get, uri
+    end
+  end
   
   [:get, :head, :post, :put, :delete,
    :options, :trace, :connect].each do |verb|
      describe "##{verb}(uri, headers, body)" do
+       it "delegates to #request" do
+         client.should_receive(:request).with(verb, uri, headers, body) { response }
+         client.send(verb, uri, headers, body).should equal(response)
+       end
      end
      
      describe ".#{verb}(uri, headers, body)" do
+       let(:client) { Hatetepe::Client }
+       
+       it "delegates to .request" do
+         client.should_receive(:request).with(verb, uri, headers, body) { response }
+         client.send(verb, uri, headers, body).should equal(response)
+       end
      end
    end
 end
