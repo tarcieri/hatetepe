@@ -4,14 +4,24 @@ module Hatetepe
   class Request < Message
     include EM::Deferrable
     
-    attr_accessor :verb, :uri, :response
+    attr_reader :verb
+    attr_accessor :uri, :response
     
-    def initialize(verb, uri, http_version = "1.1")
-      @verb, @uri = verb, uri
-      super http_version
+    def initialize(verb, uri, headers = {}, body = nil, http_version = "1.1")
+      self.verb = verb
+      @uri = uri
+      super headers, body, http_version
     end
     
-    def to_hash
+    def verb=(verb)
+      @verb = verb.to_s.upcase
+    end
+    
+    def to_a
+      [verb, uri, headers, body]
+    end
+    
+    def to_h
       {
         "rack.version" => [1, 0],
         "hatetepe.request" => self,

@@ -2,11 +2,19 @@ require "hatetepe/message"
 
 module Hatetepe
   class Response < Message
-    attr_accessor :status
+    attr_accessor :status, :request
     
-    def initialize(status, http_version = "1.1")
+    def initialize(status, headers = {}, body = nil, http_version = "1.1")
       @status = status
-      super http_version
+      super headers, body, http_version
+    end
+    
+    def success?
+      status.between? 100, 399
+    end
+    
+    def failure?
+      status.between? 400, 599
     end
     
     def to_a

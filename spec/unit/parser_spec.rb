@@ -90,14 +90,15 @@ describe Hatetepe::Parser do
   }
   
   context "#on_request {|request| ... }" do
-    it "evals the block when a request line comes in" do
+    it "evals the block when the request headers have arrived" do
       block.should_receive(:call) {|request|
         request.should equal(parser.message)
         
         request.verb.should == "POST"
         request.uri.should == "/"
         request.http_version.should == "1.1"
-        request.headers.should be_empty
+        request.headers.should == {"Transfer-Encoding" => "chunked",
+                                   "Bar" => "baz"}
       }
       
       parser.on_request &block

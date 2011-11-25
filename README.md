@@ -37,7 +37,7 @@ Getting Started (Client)
 The `Hatetepe::Client` class can be used to make requests to an HTTP server.
 
     client = Hatetepe::Client.start(:host => "example.org", :port => 80)
-    request = Hatetepe::Request.new("POST", "/search", {}, :q => "herp derp")
+    request = Hatetepe::Request.new(:post, "/search", {}, :q => "herp derp")
     client << request
     request.callback do |response|
       puts "Results:"
@@ -56,7 +56,7 @@ The `Hatetepe::Client` class can be used to make requests to an HTTP server.
 - `#headers`
 - `#body`
 
-`Request` also has `#to_hash` which will turn the object into something your
+`Request` also has `#to_h` which will turn the object into something your
 app can respond to.
 
 
@@ -133,8 +133,8 @@ Sending and Receiving BLOBs
 ---------------------------
 
 Hatetepe provides a thin wrapper around StringIO that makes it easier to handle
-streaming of request and response bodies. That means your app will be `#call`ed as
-soon as all headers have arrived. It can then do stuff while it's still
+streaming of request and response bodies. That means your app will be `#call`ed
+as soon as all headers have arrived. It can then do stuff while it's still
 receiving body data. You might for example want to track upload progress.
 
     received = nil

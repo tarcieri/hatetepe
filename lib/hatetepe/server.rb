@@ -60,7 +60,7 @@ class Hatetepe::Server
   def process(*)
     request = requests.last
     
-    env = request.to_hash.tap do |e|
+    env = request.to_h.tap do |e|
       inject_environment e
       e["stream.start"] = proc do |response|
         e.delete "stream.start"
