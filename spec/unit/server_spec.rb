@@ -94,10 +94,11 @@ describe Hatetepe::Server do
     
     it "builds the app" do
       server.post_init
-      server.app.should be_a(Hatetepe::Server::Pipeline)
-      server.app.app.should be_a(Hatetepe::Server::App)
-      server.app.app.app.should be_a(Hatetepe::Server::Proxy)
-      server.app.app.app.app.should equal(app)
+      server.app.should be_a(Hatetepe::Server::KeepAlive)
+      server.app.app.should be_a(Hatetepe::Server::Pipeline)
+      server.app.app.app.should be_a(Hatetepe::Server::App)
+      server.app.app.app.app.should be_a(Hatetepe::Server::Proxy)
+      server.app.app.app.app.app.should equal(app)
     end
     
     it "starts the connection inactivity tracking" do

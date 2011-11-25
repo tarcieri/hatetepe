@@ -13,6 +13,7 @@ module Hatetepe
   class Client < Hatetepe::Connection; end
 end
 
+require "hatetepe/client/keep_alive"
 require "hatetepe/client/pipeline"
 
 class Hatetepe::Client
@@ -28,6 +29,7 @@ class Hatetepe::Client
     @pending_transmission, @pending_response = {}, {}
     
     @app = Rack::Builder.new.tap do |b|
+      b.use KeepAlive
       b.use Pipeline
       b.run method(:send_request)
     end.to_app

@@ -42,8 +42,9 @@ describe Hatetepe::Client do
     end
     
     it "builds the app" do
-      client.app.should be_a(Hatetepe::Client::Pipeline)
-      client.app.app.should == client.method(:send_request)
+      client.app.should be_a(Hatetepe::Client::KeepAlive)
+      client.app.app.should be_a(Hatetepe::Client::Pipeline)
+      client.app.app.app.should == client.method(:send_request)
     end
   end
   

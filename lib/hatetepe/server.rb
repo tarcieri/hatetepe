@@ -12,6 +12,7 @@ module Hatetepe
 end
 
 require "hatetepe/server/app"
+require "hatetepe/server/keep_alive"
 require "hatetepe/server/pipeline"
 require "hatetepe/server/proxy"
 
@@ -41,6 +42,7 @@ class Hatetepe::Server
     #builder.on_write {|data| p "server >> #{data}" }
 
     @app = Rack::Builder.new.tap do |b|
+      b.use KeepAlive
       b.use Pipeline
       b.use App
       b.use Proxy
