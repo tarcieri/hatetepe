@@ -79,7 +79,7 @@ class Hatetepe::Server
   
   def start_response(response)
     builder.response_line response[0]
-    response[1]["Server"] = "hatetepe/#{Hatetepe::VERSION}"
+    response[1]["Server"] ||= "hatetepe/#{Hatetepe::VERSION}"
     builder.headers response[1]
   end
   
