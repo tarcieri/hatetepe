@@ -177,13 +177,21 @@ License
 Hatetepe is subject to an MIT-style license (see LICENSE file).
 
 
-To Do and Ideas
----------------
+Roadmap
+-------
 
-- Proxy
+- 0.4.0
+  - Refactor Client ([ec5fab3](https://github.com/lgierth/hatetepe/commit/ec5fab331b097805c500b1e74f19700e773ae6a1))
+  - Keep-Alive support
+- 0.5.0
+  - Direct IO via EM.enable_proxy
+  - Encoding support (ref. [github.com/tmm1/http_parser.rb#1](https://github.com/tmm1/http_parser.rb/pull/1))
+
+
+Ideas
+-----
+
 - Code reloading
-- Keep-alive
-- Native file sending/receiving
 - Preforking
 - MVM support via Thread Pool
 - Support for SPDY
@@ -192,8 +200,3 @@ To Do and Ideas
 - Daemonizing and dropping privileges
 - Trailing headers
 - Propagating connection errors to the app
-
-- Fix http_parser.rb's parsing of chunked bodies
-- Does http_parser.rb recognize trailing headers?
-- Encoding support (see https://github.com/tmm1/http_parser.rb/pull/1)
-- Are there any good C libs for building HTTP messages?
