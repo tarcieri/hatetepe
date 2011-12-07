@@ -42,23 +42,11 @@ describe Hatetepe::Server do
   
   context "#initialize(config)" do
     let(:server) { Hatetepe::Server.allocate }
-    let(:builder) { stub "app builder", :to_app => to_app }
-    let(:to_app) { stub "to_app" }
-
-    it "builds the app" do
-      Rack::Builder.stub :new => builder
-      builder.should_receive(:use).with Hatetepe::Server::Pipeline
-      builder.should_receive(:use).with Hatetepe::Server::App
-      builder.should_receive(:use).with Hatetepe::Server::Proxy
-      builder.should_receive(:run).with app
-      
-      server.send :initialize, config
-      server.app.should equal(to_app)
-    end
     
     it "sets up the error stream" do
       server.send :initialize, config
       server.errors.should equal(errors)
+      config[:errors].should be_nil
     end
     
     it "uses stderr as default error stream" do
@@ -69,9 +57,12 @@ describe Hatetepe::Server do
   end
   
   context "#post_init" do
-    let(:server) {
-      Hatetepe::Server.allocate.tap {|s| s.post_init }
-    }
+    let :server do
+      Hatetepe::Server.allocate.tap do |s|
+        s.send :initialize, config
+        s.post_init
+      end
+    end
     
     it "sets up the request queue" do
       server.requests.should be_an(Array)
@@ -86,6 +77,14 @@ describe Hatetepe::Server do
     it "sets up the builder" do
       server.builder.on_write[0].should == server.method(:send_data)
     end
+    
+    it "builds the app" do
+      server.app.should be_a(Hatetepe::Server::Pipeline)
+      server.app.app.should be_a(Hatetepe::Server::App)
+      server.app.app.app.should be_a(Hatetepe::Server::Proxy)
+      server.app.app.app.app.should equal(app)
+    end
+    
   end
   
   context "#receive_data(data)" do

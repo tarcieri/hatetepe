@@ -24,14 +24,7 @@ class Hatetepe::Server
   
   def initialize(config)
     @config = config
-    @errors = config[:errors] || $stderr
-
-    @app = Rack::Builder.new.tap do |b|
-      b.use Pipeline
-      b.use App
-      b.use Proxy
-      b.run config[:app]
-    end.to_app
+    @errors = config.delete(:errors) || $stderr
 
     super
   end
@@ -44,6 +37,13 @@ class Hatetepe::Server
     parser.on_headers << method(:process)
 
     builder.on_write << method(:send_data)
+
+    @app = Rack::Builder.new.tap do |b|
+      b.use Pipeline
+      b.use App
+      b.use Proxy
+      b.run config[:app]
+    end.to_app
   end
   
   def receive_data(data)
