@@ -23,7 +23,7 @@ class Hatetepe::Server
   attr_reader :requests, :parser, :builder
   
   def initialize(config)
-    @config = config
+    @config = {:timeout => 5}.merge(config)
     @errors = config.delete(:errors) || $stderr
 
     super
@@ -44,6 +44,8 @@ class Hatetepe::Server
       b.use Proxy
       b.run config[:app]
     end.to_app
+    
+    set_comm_inactivity_timeout config[:timeout]
   end
   
   def receive_data(data)
@@ -58,6 +60,7 @@ class Hatetepe::Server
   end
   
   def process(*)
+    set_comm_inactivity_timeout 0
     request = requests.last
     
     env = request.to_h.tap do |e|
@@ -83,10 +86,11 @@ class Hatetepe::Server
     builder.headers response[1]
   end
   
+  # TODO delete request in env[stream.close]
   def close_response(request)
     builder.complete
     requests.delete request
-    close_connection_after_writing if requests.empty?
+    set_comm_inactivity_timeout config[:timeout] if requests.empty?
   end
     
   def inject_environment(env)

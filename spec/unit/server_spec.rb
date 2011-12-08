@@ -5,6 +5,7 @@ describe Hatetepe::Server do
   let(:server) {
     Hatetepe::Server.allocate.tap {|s|
       s.send :initialize, config
+      s.stub :set_comm_inactivity_timeout
       s.post_init
       s.requests << request
     }
@@ -25,7 +26,8 @@ describe Hatetepe::Server do
       :app => app,
       :host => host,
       :port => port,
-      :errors => errors
+      :errors => errors,
+      :timeout => 0.0123
     }
   }
   
@@ -54,37 +56,50 @@ describe Hatetepe::Server do
       server.send :initialize, config
       server.errors.should equal($stderr)
     end
+    
+    it "assumes a default connection inactivity timeout of 5 seconds" do
+      server.send :initialize, {}
+      server.config[:timeout].should equal(5)
+    end
   end
   
   context "#post_init" do
     let :server do
       Hatetepe::Server.allocate.tap do |s|
         s.send :initialize, config
-        s.post_init
+        s.stub :set_comm_inactivity_timeout
       end
     end
     
     it "sets up the request queue" do
+      server.post_init
       server.requests.should be_an(Array)
       server.requests.should be_empty
     end
     
     it "sets up the parser" do
+      server.post_init
       server.parser.should respond_to(:<<)
       server.parser.on_request[0].should == server.requests.method(:<<)
     end
     
     it "sets up the builder" do
+      server.post_init
       server.builder.on_write[0].should == server.method(:send_data)
     end
     
     it "builds the app" do
+      server.post_init
       server.app.should be_a(Hatetepe::Server::Pipeline)
       server.app.app.should be_a(Hatetepe::Server::App)
       server.app.app.app.should be_a(Hatetepe::Server::Proxy)
       server.app.app.app.app.should equal(app)
     end
     
+    it "starts the connection inactivity tracking" do
+      server.should_receive(:set_comm_inactivity_timeout).with 0.0123
+      server.post_init
+    end
   end
   
   context "#receive_data(data)" do
@@ -122,6 +137,8 @@ describe Hatetepe::Server do
   end
   
   context "#process" do
+    before { app.stub :call => [-1]}
+    
     it "puts useful stuff into env[]" do
       app.should_receive(:call) {|e|
         e.should equal(env)
@@ -152,6 +169,11 @@ describe Hatetepe::Server do
         Fiber.current.should_not equal(outer_fiber)
         [-1]
       }
+      server.process
+    end
+    
+    it "pauses the connection inactivity tracking" do
+      server.should_receive(:set_comm_inactivity_timeout).with 0
       server.process
     end
   end
@@ -210,7 +232,6 @@ describe Hatetepe::Server do
   
   context "env[stream.close].call" do
     before {
-      server.stub :close_connection
       server.builder.stub :complete
       request.stub :succeed
     }
@@ -251,6 +272,21 @@ describe Hatetepe::Server do
         [-1]
       }
       server.process
+    end
+  end
+  
+  describe "#close_response(request)" do
+    before { server.requests << stub("a pending request") }
+    
+    it "doesn't restart the tracking if there are other requests being processed" do
+      server.should_not_receive :set_comm_inactivity_timeout
+      server.close_response request
+    end
+    
+    it "restarts the connection inactivitiy tracking" do
+      server.requests.clear
+      server.should_receive(:set_comm_inactivity_timeout).with config[:timeout]
+      server.close_response request
     end
   end
   
