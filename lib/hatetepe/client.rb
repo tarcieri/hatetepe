@@ -83,6 +83,7 @@ class Hatetepe::Client
   end
   
   def request(verb, uri, headers = {}, body = nil)
+    headers["Host"] ||= "#{config[:host]}:#{config[:port]}"
     headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
     
     request = Hatetepe::Request.new(verb, uri, headers, body)
