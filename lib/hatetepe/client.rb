@@ -91,6 +91,9 @@ class Hatetepe::Client
     
     self << request
     EM::Synchrony.sync request
+    
+    request.response.body.close_write if request.verb == "HEAD"
+    
     request.response
   end
   

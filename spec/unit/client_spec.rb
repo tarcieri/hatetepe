@@ -245,6 +245,12 @@ describe Hatetepe::Client do
       client.request :get, uri
     end
     
+    it "closes the response body if the request's method was HEAD" do
+      Hatetepe::Request.any_instance.stub :response => response
+      response.body.should_receive :close_write
+      client.request :head, uri
+    end
+    
     it "returns the response" do
       Hatetepe::Request.any_instance.stub :response => response
       client.request(:get, uri).should equal(response)
