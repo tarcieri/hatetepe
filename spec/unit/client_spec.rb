@@ -220,12 +220,35 @@ describe Hatetepe::Client do
       client.request :get, uri, "User-Agent" => user_agent
     end
     
-    it "closes the body if no body data was passed" do
-      Hatetepe::Body.any_instance.should_receive :close_write
-      client.request :get, uri
+    describe "with Content-Type: application/x-www-form-urlencoded" do
+      let :headers do
+        {"Content-Type" => "application/x-www-form-urlencoded"}
+      end
+      
+      let :body do
+        [
+          stub("body#1", :length => 12),
+          stub("body#2", :length => 13),
+          stub("body#3", :length => 14)
+        ]
+      end
+      
+      it "computes the body's length" do
+        client.should_receive :<< do |request|
+          request.headers["Content-Length"].should equal(39)
+        end
+        client.request :get, uri, headers, body
+      end
+      
+      it "sets Content-Length to 0 if no body was passed" do
+        client.should_receive :<< do |request|
+          request.headers["Content-Length"].should equal(0)
+        end
+        client.request :get, uri, headers
+      end
     end
     
-    it "doesn't close the body body data was passed" do
+    it "doesn't close the body" do
       body.should_not_receive :close_write
       client.request :get, uri, {}, body
     end
@@ -235,7 +258,7 @@ describe Hatetepe::Client do
         request.verb.should == "GET"
         request.uri.should == uri
         request.headers.should == headers
-        request.body.should == body
+        request.body.should == [body]
       end
       client.request :get, uri, headers, body
     end
@@ -277,6 +300,28 @@ describe Hatetepe::Client do
     it "closes the connection" do
       client.should_receive :close_connection
       client.stop!
+    end
+  end
+  
+  describe "#wrap_body(body)" do
+    let(:body) { stub "body" }
+    
+    it "doesn't modify a body that responds to #each" do
+      body.stub :each
+      client.wrap_body(body).should equal(body)
+    end
+    
+    it "makes a body that responds to #read enumerable" do
+      body.stub :read => stub("#read")
+      client.wrap_body(body).should == [body.read]
+    end
+    
+    it "makes other bodies enumerable" do
+      client.wrap_body(body).should == [body]
+    end
+    
+    it "makes an empty body enumerable" do
+      client.wrap_body(nil).should == []
     end
   end
   

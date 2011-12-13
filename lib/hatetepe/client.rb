@@ -86,9 +86,12 @@ class Hatetepe::Client
     headers["Host"] ||= "#{config[:host]}:#{config[:port]}"
     headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
     
-    request = Hatetepe::Request.new(verb, uri, headers, body)
-    request.body.close_write unless body
+    body = wrap_body(body)
+    if headers["Content-Type"] == "application/x-www-form-urlencoded"
+      headers["Content-Length"] = body.to_enum.inject(0) {|a, e| a + e.length }
+    end
     
+    request = Hatetepe::Request.new(verb, uri, headers, body)
     self << request
     EM::Synchrony.sync request
     
@@ -107,6 +110,18 @@ class Hatetepe::Client
   
   def stop!
     close_connection
+  end
+  
+  def wrap_body(body)
+    if body.respond_to? :each
+      body
+    elsif body.respond_to? :read
+      [body.read]
+    elsif body
+      [body]
+    else
+      []
+    end
   end
   
   class << self
