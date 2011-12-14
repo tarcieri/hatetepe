@@ -21,23 +21,6 @@ describe "The `hatetepe start' command" do
     FakeFS::FileSystem.clear
   end
   
-  def command(opts, timeout = 0.05, &expectations)
-    finished = false
-    
-    EM.spec_hooks << proc do
-      EM.add_timer(timeout) do
-        EM.stop
-        fail "`hatetepe start #{opts}' hit the timeout" unless finished
-      end
-    end
-    EM.spec_hooks << proc do
-      expectations.call
-      finished = true
-    end
-    
-    Hatetepe::CLI.start opts.split
-  end
-  
   describe "without options" do
     it "starts a Hatetepe::Server with default options" do
       command "" do

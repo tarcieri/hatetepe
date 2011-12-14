@@ -39,4 +39,25 @@ RSpec.configure do |config|
   config.after :each do
     EM.instance_variable_set :@spec_hooks, nil
   end
+  
+  def secure_reactor(timeout = 0.05, &expectations)
+    finished = false
+    location = caller[0]
+    
+    EM.spec_hooks << proc do
+      EM.add_timer(timeout) do
+        EM.stop
+        fail "Timeout exceeded (#{location})" unless finished
+      end
+    end
+    EM.spec_hooks << proc do
+      expectations.call
+      finished = true
+    end
+  end
+  
+  def command(opts, timeout = 0.05, &expectations)
+    secure_reactor timeout, &expectations
+    Hatetepe::CLI.start opts.split
+  end
 end
