@@ -21,7 +21,6 @@ Gem::Specification.new do |s|
   
   s.add_development_dependency "rspec"
   s.add_development_dependency "fakefs"
-  s.add_development_dependency "em-http-request", "~> 1.0"
 
   s.files         = `git ls-files`.split("\n") - [".gitignore"]
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")

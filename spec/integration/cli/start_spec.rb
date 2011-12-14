@@ -1,27 +1,16 @@
 require "spec_helper"
 require "hatetepe/cli"
-require "socket"
 
-describe "start command" do
-  def hook_event_loop(&block)
-    EM.spec_hooks << block
-  end
-  
-  def add_stop_timer(timeout)
-    hook_event_loop do
-      EM.add_timer(timeout) { EM.stop }
-    end
-  end
-  
+describe "The `hatetepe start' command" do
   before do
-    $stderr = StringIO.new ""
+    $stderr = StringIO.new
     
     FakeFS.activate!
-    File.open("config.ru", "w") do |f|
-      f.write %q{run proc {|e| [200, {"Content-Type" => "text/plain"}, [e["REQUEST_URI"]]] }}
+    File.open "config.ru", "w" do |f|
+      f.write 'run proc {|env| [200, {}, ["Hello world!"]] }'
     end
-    File.open("config2.ru", "w") do |f|
-      f.write %q{run proc {|e| [200, {"Content-Type" => "text/plain"}, ["config2.ru loaded"]] }}
+    File.open "config2.ru", "w" do |f|
+      f.write 'run proc {|env| [501, {}, ["Herp derp"]] }'
     end
   end
   
@@ -32,138 +21,87 @@ describe "start command" do
     FakeFS::FileSystem.clear
   end
   
-  it "starts an instance of Rity" do
-    add_stop_timer 0.05
-    hook_event_loop do
-      Socket.tcp("127.0.0.1", 3000) {|*| }
-    end
-    Hatetepe::CLI.start %w{}
-
-    $stderr.string.should include("127.0.0.1:3000")
-  end
-  
-  it "answers HTTP requests" do
-    add_stop_timer 0.02
-    hook_event_loop do
-      request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
-      response = EM::Synchrony.sync(request)
-      
-      response.response_header.status.should == 200
-      response.response_header["CONTENT_TYPE"].should == "text/plain"
-      response.response.should == "/"
-    end
-    Hatetepe::CLI.start %w{}
-  end
-  
-  describe "--port option" do
-    it "changes the listen port" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        Socket.tcp("127.0.0.1", 3001) {|*| }
+  def command(opts, timeout = 0.05, &expectations)
+    finished = false
+    
+    EM.spec_hooks << proc do
+      EM.add_timer(timeout) do
+        EM.stop
+        fail "`hatetepe start #{opts}' hit the timeout" unless finished
       end
-      Hatetepe::CLI.start %w{--port=3001}
-      
-      $stderr.string.should include(":3001")
+    end
+    EM.spec_hooks << proc do
+      expectations.call
+      finished = true
     end
     
-    it "has an alias: -p" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        Socket.tcp("127.0.0.1", 3002) {|*| }
-      end
-      Hatetepe::CLI.start %w{-p 3002}
-      
-      $stderr.string.should include(":3002")
-    end
+    Hatetepe::CLI.start opts.split
   end
   
-  describe "--bind option" do
-    it "changes the listen interface" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        Socket.tcp("127.0.0.2", 3000) {|*| }
+  describe "without options" do
+    it "starts a Hatetepe::Server with default options" do
+      command "" do
+        Socket.tcp("127.0.0.1", 3000) {|*| }
+        $stderr.string.should include("config.ru", "127.0.0.1:3000")
       end
-      Hatetepe::CLI.start %w{--bind=127.0.0.2}
-      
-      $stderr.string.should include("127.0.0.2:")
     end
     
-    it "has an alias: -b" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        Socket.tcp("127.0.0.3", 3000) {|*| }
+    it "serves HTTP requests" do
+      command "" do
+        Hatetepe::Client.get("http://127.0.0.1:3000").tap do |response|
+          response.status.should equal(200)
+          response.body.read.should == "Hello world!"
+        end
       end
-      Hatetepe::CLI.start %w{-b 127.0.0.3}
-      
-      $stderr.string.should include("127.0.0.3:")
     end
   end
   
-  describe "--rackup option" do
-    it "changes the rackup file that'll be loaded" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
-        response = EM::Synchrony.sync(request)
-        response.response.should include("config2.ru")
+  ["--port", "-p"].each do |opt|
+    describe "with #{opt} option" do
+      it "binds the Hatetepe::Server to the specified TCP port" do
+        command "#{opt} 3002" do
+          Socket.tcp("127.0.0.1", 3002) {|*| }
+        end
       end
-      Hatetepe::CLI.start %w{--rackup=config2.ru}
-    end
-    
-    it "has an alias: -r" do
-      add_stop_timer 0.05
-      hook_event_loop do
-        request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
-        response = EM::Synchrony.sync(request)
-        response.response.should include("config2.ru")
-      end
-      Hatetepe::CLI.start %w{-r config2.ru}
     end
   end
   
-  describe "--quiet option" do
-    it "discards all output" do
-      pending
-      
-      add_stop_timer 0.05
-      Hatetepe::CLI.start %w{--quiet}
-      
-      $stderr.string.should be_empty
-    end
-    
-    it "has an alias: -q" do
-      pending
-      
-      add_stop_timer 0.05
-      Hatetepe::CLI.start %w{-q}
-      
-      $stderr.string.should be_empty
+  ["--bind", "-b"].each do |opt|
+    describe "with #{opt} option" do
+      it "binds the Hatetepe::Server to the specified TCP interface" do
+        command "#{opt} 127.0.0.2" do
+          Socket.tcp("127.0.0.2", 3000) {|*| }
+        end
+      end
     end
   end
   
-  describe "--verbose option" do
-    it "prints debugging data" do
-      pending
-      
-      add_stop_timer 0.05
-      hook_event_loop do
-        request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
+  ["--rackup", "-r"].each do |opt|
+    describe "with #{opt} option" do
+      it "loads the specified rackup (.ru) file" do
+        command "#{opt} config2.ru" do
+          Hatetepe::Client.get("http://127.0.0.1:3000").tap do |response|
+            response.status.should equal(501)
+            response.body.read.should == "Herp derp"
+          end
+        end
       end
-      Hatetepe::CLI.start %w{--verbose}
-      
-      $stderr.string.split("\n").size.should > 10
     end
-
-    it "has an alias: -V" do
-      pending
-      
-      add_stop_timer 0.05
-      hook_event_loop do
-        request = EM::HttpRequest.new("http://127.0.0.1:3000").aget
+  end
+  
+  ["--verbose", "-v"].each do |opt|
+    describe "with #{opt} option" do
+      it "prints debugging data" do
+        pending
       end
-      Hatetepe::CLI.start %w{-V}
-      
-      $stderr.string.split("\n").size.should > 10
+    end
+  end
+  
+  ["--quiet", "-q"].each do |opt|
+    describe "with #{opt} option" do
+      it "discards all output" do
+        pending
+      end
     end
   end
 end
