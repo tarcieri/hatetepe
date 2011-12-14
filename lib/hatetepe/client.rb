@@ -88,7 +88,8 @@ class Hatetepe::Client
     
     body = wrap_body(body)
     if headers["Content-Type"] == "application/x-www-form-urlencoded"
-      headers["Content-Length"] = body.to_enum.inject(0) {|a, e| a + e.length }
+      enum = Enumerator.new(body)
+      headers["Content-Length"] = enum.inject(0) {|a, e| a + e.length }
     end
     
     request = Hatetepe::Request.new(verb, uri, headers, body)
