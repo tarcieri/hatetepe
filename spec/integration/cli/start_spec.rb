@@ -71,20 +71,4 @@ describe "The `hatetepe start' command" do
       end
     end
   end
-  
-  ["--verbose", "-v"].each do |opt|
-    describe "with #{opt} option" do
-      it "prints debugging data" do
-        pending
-      end
-    end
-  end
-  
-  ["--quiet", "-q"].each do |opt|
-    describe "with #{opt} option" do
-      it "discards all output" do
-        pending
-      end
-    end
-  end
 end
