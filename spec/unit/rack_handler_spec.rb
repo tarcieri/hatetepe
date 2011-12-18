@@ -31,17 +31,6 @@ describe Rack::Handler::Hatetepe do
       Rack::Handler::Hatetepe.run app, options
     end
     
-    it "yields the server" do
-      Hatetepe::Server.stub :start => server
-      
-      srvr = nil
-      Rack::Handler::Hatetepe.run(app) {|s|
-        srvr = s
-        EM.stop
-      }
-      srvr.should equal(server)
-    end
-    
     it "can be stopped by sending SIGTERM or SIGINT" do
       EM.should_receive(:synchrony) {|&block| block.call }
       
@@ -63,8 +52,9 @@ describe Rack::Handler::Hatetepe do
       Hatetepe::Server.should_receive(:start) {|opts|
         opts[:host].should == "0.0.0.0"
         opts[:port].should == 8080
+        EM.stop
       }
-      Rack::Handler::Hatetepe.run(app) { EM.stop }
+      Rack::Handler::Hatetepe.run app
     end
   end
 end
