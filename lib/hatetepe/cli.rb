@@ -21,10 +21,17 @@ module Hatetepe
       :banner => "Bind to the specified port (default: 3000)"
     method_option :rackup, :aliases => "-r", :type => :string,
       :banner => "Load specified rackup (.ru) file (default: config.ru)"
+    method_option :env, :aliases => "-e", :type => :string,
+      :banner => "Boot the app in the specified environment (default: development)"
     def start
+      ENV["RACK_ENV"] = expand_env(options[:env]) || ENV["RACK_ENV"] || "development"
+      $stderr << "We're in #{ENV["RACK_ENV"]}\n"
+      $stderr.flush
+      
       rackup = File.expand_path(options[:rackup] || "config.ru")
       $stderr << "Booting from #{rackup}\n"
       $stderr.flush
+      
       app = Rack::Builder.parse_file(rackup)[0]
 
       EM.epoll
@@ -43,6 +50,17 @@ module Hatetepe
           :host => host,
           :port => port
         })
+      end
+    end
+    
+    protected
+    
+    def expand_env(env)
+      env &&= env.dup.downcase
+      case env
+        when /^dev(el(op)?)?$/ then "development"
+        when /^test(ing)?$/ then "testing"
+        else env
       end
     end
   end

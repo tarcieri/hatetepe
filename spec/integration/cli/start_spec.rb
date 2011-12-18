@@ -3,6 +3,8 @@ require "hatetepe/cli"
 
 describe "The `hatetepe start' command" do
   before do
+    ENV.delete "RACK_ENV"
+    
     $stderr = StringIO.new
     
     FakeFS.activate!
@@ -25,7 +27,8 @@ describe "The `hatetepe start' command" do
     it "starts a Hatetepe::Server with default options" do
       command "" do
         Socket.tcp("127.0.0.1", 3000) {|*| }
-        $stderr.string.should include("config.ru", "127.0.0.1:3000")
+        ENV["RACK_ENV"].should == "development"
+        $stderr.string.should include("config.ru", "127.0.0.1:3000", "development")
       end
     end
     
@@ -67,6 +70,30 @@ describe "The `hatetepe start' command" do
             response.status.should equal(501)
             response.body.read.should == "Herp derp"
           end
+        end
+      end
+    end
+  end
+  
+  ["--env", "-e"].each do |opt|
+    describe "with #{opt} option" do
+      it "boots the app in the specified environment" do
+        command "#{opt} herpderp" do
+          ENV["RACK_ENV"].should == "herpderp"
+        end
+      end
+      
+      ["dev", "devel", "develop"].each do |value|
+        it "expands dev, devel and develop to `development'" do
+          command "#{opt} #{value}" do
+            ENV["RACK_ENV"].should == "development"
+          end
+        end
+      end
+      
+      it "expands test to `testing'" do
+        command "#{opt} test" do
+          ENV["RACK_ENV"].should == "testing"
         end
       end
     end
