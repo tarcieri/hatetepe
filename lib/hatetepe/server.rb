@@ -23,7 +23,7 @@ class Hatetepe::Server
   attr_reader :requests, :parser, :builder
   
   def initialize(config)
-    @config = {:timeout => 5}.merge(config)
+    @config = {:timeout => 1}.merge(config)
     @errors = config.delete(:errors) || $stderr
 
     super

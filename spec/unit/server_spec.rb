@@ -57,9 +57,9 @@ describe Hatetepe::Server do
       server.errors.should equal($stderr)
     end
     
-    it "assumes a default connection inactivity timeout of 5 seconds" do
+    it "assumes a default connection inactivity timeout of 1 seconds" do
       server.send :initialize, {}
-      server.config[:timeout].should equal(5)
+      server.config[:timeout].should equal(1)
     end
   end
   
