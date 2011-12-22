@@ -8,7 +8,8 @@ describe Hatetepe::Server::App do
     {
       "stream.start" => proc {},
       "stream.send" => proc {},
-      "stream.close" => proc {}
+      "stream.close" => proc {},
+      "hatetepe.connection" => Struct.new(:config).new({})
     }
   }
   
@@ -48,13 +49,24 @@ describe Hatetepe::Server::App do
       [500, {"Content-Type" => "text/html"}, ["Internal Server Error"]]
     }
     
-    it "responds with 500 when catching an exception" do
+    it "responds with 500 when catching an error" do
       inner_app.stub(:call) { raise }
       app.should_receive(:postprocess) {|e, res|
         res.should == error_response
       }
       
       app.call env
+    end
+    
+    describe "if server's :env option is testing" do
+      let(:error) { StandardError.new }
+      
+      before { env["hatetepe.connection"].config[:env] = "testing" }
+      
+      it "doesn't catch errors" do
+        inner_app.stub(:call) { raise error }
+        expect { app.call env }.to raise_error(error)
+      end
     end
     
     let(:async_response) { [-1, {}, []] }

@@ -39,7 +39,12 @@ class Hatetepe::Server
       
       response = ASYNC_RESPONSE
       catch :async do
-        response = app.call(env) rescue ERROR_RESPONSE
+        response = begin
+          app.call env
+        rescue => ex
+          raise ex if env["hatetepe.connection"].config[:env] == "testing"
+          ERROR_RESPONSE
+        end
       end
       
       postprocess env, response
