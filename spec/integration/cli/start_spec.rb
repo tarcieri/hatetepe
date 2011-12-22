@@ -98,4 +98,22 @@ describe "The `hatetepe start' command" do
       end
     end
   end
+  
+  ["--keepalive", "-k"].each do |opt|
+    describe "with #{opt} option" do
+      it "timeouts a connection after the specified amount of seconds" do
+        command "#{opt} 1.5", 1.6 do
+          Socket.tcp "127.0.0.1", 3000 do |s|
+            s.should be_healthy
+            
+            sleep 1.45
+            s.should be_healthy
+            
+            sleep 0.1
+            s.should be_healthy
+          end
+        end
+      end
+    end
+  end
 end
