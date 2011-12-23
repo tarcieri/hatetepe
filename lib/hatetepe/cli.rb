@@ -1,7 +1,5 @@
 require "thor"
 
-require "hatetepe"
-
 module Hatetepe
   class CLI < Thor
     map "--version" => :version
@@ -11,6 +9,7 @@ module Hatetepe
     
     desc :version, "Print version information"
     def version
+      require "hatetepe/version"
       say Hatetepe::VERSION
     end
     
@@ -24,6 +23,8 @@ module Hatetepe
     method_option :env, :aliases => "-e", :type => :string,
       :banner => "Boot the app in the specified environment (default: development)"
     def start
+      require "hatetepe/server"
+      
       ENV["RACK_ENV"] = expand_env(options[:env]) || ENV["RACK_ENV"] || "development"
       $stderr << "We're in #{ENV["RACK_ENV"]}\n"
       $stderr.flush
