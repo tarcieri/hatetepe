@@ -84,7 +84,7 @@ describe "The `hatetepe start' command" do
       end
       
       ["dev", "devel", "develop"].each do |value|
-        it "expands dev, devel and develop to `development'" do
+        it "expands #{value} to `development'" do
           command "#{opt} #{value}" do
             ENV["RACK_ENV"].should == "development"
           end
