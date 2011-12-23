@@ -24,11 +24,13 @@ Using Hatetepe as your HTTP server is easy. Simply use the CLI that ships with
 the gem:
 
     $ hatetepe
+    We're in development
     Booting from /home/lars/workspace/hatetepe/config.ru
     Binding to 127.0.0.1:3000
 
 You can configure the network port and interface as well as the Rackup (.ru)
-file to be used. More help is available via the `hatetepe help` command.
+file to be used and the RACK_ENV to run in. More help is available via the
+`hatetepe help` command.
 
 
 Getting Started (Client)
