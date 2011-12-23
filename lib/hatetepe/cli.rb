@@ -11,7 +11,7 @@ module Hatetepe
     
     desc :version, "Print version information"
     def version
-      say Rity::VERSION
+      say Hatetepe::VERSION
     end
     
     desc "[start]", "Start a server"
