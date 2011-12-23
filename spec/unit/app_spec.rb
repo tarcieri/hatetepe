@@ -8,8 +8,7 @@ describe Hatetepe::Server::App do
     {
       "stream.start" => proc {},
       "stream.send" => proc {},
-      "stream.close" => proc {},
-      "hatetepe.connection" => Struct.new(:config).new({})
+      "stream.close" => proc {}
     }
   }
   
@@ -61,7 +60,9 @@ describe Hatetepe::Server::App do
     describe "if server's :env option is testing" do
       let(:error) { StandardError.new }
       
-      before { env["hatetepe.connection"].config[:env] = "testing" }
+      before { @old_env, ENV["RACK_ENV"] = ENV["RACK_ENV"], "testing" }
+      
+      after { ENV["RACK_ENV"] = @old_env }
       
       it "doesn't catch errors" do
         inner_app.stub(:call) { raise error }

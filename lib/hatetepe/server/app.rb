@@ -42,7 +42,7 @@ class Hatetepe::Server
         response = begin
           app.call env
         rescue => ex
-          raise ex if env["hatetepe.connection"].config[:env] == "testing"
+          raise ex if ENV["RACK_ENV"] == "testing"
           ERROR_RESPONSE
         end
       end
