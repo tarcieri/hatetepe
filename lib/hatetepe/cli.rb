@@ -14,7 +14,7 @@ module Hatetepe
       say Rity::VERSION
     end
     
-    desc :start, "Start an instance of Rity"
+    desc "[start]", "Start a server"
     method_option :bind, :aliases => "-b", :type => :string,
       :banner => "Bind to the specified TCP interface (default: 127.0.0.1)"
     method_option :port, :aliases => "-p", :type => :numeric,
