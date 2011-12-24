@@ -41,10 +41,8 @@ class Hatetepe::Server
       
       uri = target.path + base.uri
       host = "#{target.host}:#{target.port}"
-      Hatetepe::Request.new(base.verb, uri, base.http_version).tap do |req|
-        req.headers = base.headers.merge("Host" => host)
-        req.body = base.body
-      end
+      headers = base.headers.merge("Host" => host)
+      Hatetepe::Request.new base.verb, uri, headers, base.body
     end
   end
 end

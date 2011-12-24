@@ -37,6 +37,7 @@ class Hatetepe::Server
     parser.on_headers << method(:process)
 
     builder.on_write << method(:send_data)
+    #builder.on_write {|data| p "server >> #{data}" }
 
     @app = Rack::Builder.new.tap do |b|
       b.use Pipeline
@@ -49,6 +50,7 @@ class Hatetepe::Server
   end
   
   def receive_data(data)
+    #p "server << #{data}"
     parser << data
   rescue Hatetepe::ParserError
     close_connection

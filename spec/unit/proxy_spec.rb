@@ -136,5 +136,10 @@ describe Hatetepe::Server::Proxy do
     it "builds a new request" do
       proxy.build_request(env, target).should_not equal(base_request)
     end
+    
+    it "sets version to HTTP/1.1" do
+      base_request.http_version = "1.0"
+      proxy.build_request(env, target).http_version.should == "1.1"
+    end
   end
 end

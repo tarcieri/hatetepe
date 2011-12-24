@@ -37,11 +37,11 @@ class Hatetepe::Client
   def post_init
     parser.on_response << method(:receive_response)
     builder.on_write << method(:send_data)
-    #builder.on_write {|data| p "--> #{data}" }
+    #builder.on_write {|data| p "client >> #{data}" }
   end
   
   def receive_data(data)
-    #p "<-- #{data}"
+    #p "client << #{data}"
     parser << data
   rescue => e
     stop!
