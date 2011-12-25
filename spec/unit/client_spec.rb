@@ -15,6 +15,10 @@ describe Hatetepe::Client do
   let(:body) { stub "body" }
   let(:response) { Hatetepe::Response.new 200 }
   
+  it "inherits from Hatetepe::Connection" do
+    client.should be_a(Hatetepe::Connection)
+  end
+  
   describe "#initialize(config)" do
     it "sets the config" do
       client.config.should equal(config)

@@ -4,12 +4,13 @@ require "rack"
 require "uri"
 
 require "hatetepe/builder"
+require "hatetepe/connection"
 require "hatetepe/parser"
 require "hatetepe/request"
 require "hatetepe/version"
 
 module Hatetepe
-  class Client < EM::Connection; end
+  class Client < Hatetepe::Connection; end
 end
 
 require "hatetepe/client/pipeline"

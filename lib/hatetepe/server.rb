@@ -3,11 +3,12 @@ require "em-synchrony"
 require "rack"
 
 require "hatetepe/builder"
+require "hatetepe/connection"
 require "hatetepe/parser"
 require "hatetepe/version"
 
 module Hatetepe
-  class Server < EM::Connection; end
+  class Server < Hatetepe::Connection; end
 end
 
 require "hatetepe/server/app"
@@ -113,19 +114,5 @@ class Hatetepe::Server
     host = env["HTTP_HOST"] || config[:host].dup
     host += ":#{config[:port]}" unless host.include? ":"
     env["HTTP_HOST"] = host
-  end
-  
-  def remote_address
-    sockaddr && sockaddr[1]
-  end
-  
-  def remote_port
-    sockaddr && sockaddr[0]
-  end
-  
-  private
-  
-  def sockaddr
-    @sockaddr ||= Socket.unpack_sockaddr_in(get_peername) rescue nil
   end
 end
