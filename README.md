@@ -186,6 +186,7 @@ Roadmap
   - Refactor Client ([ec5fab3](https://github.com/lgierth/hatetepe/commit/ec5fab331b097805c500b1e74f19700e773ae6a1))
   - Keep-Alive support
   - Give some love to the CLI
+  - Support for rubygems-test
 - 0.5.0
   - Direct IO via EM.enable_proxy
   - Encoding support (ref. [github.com/tmm1/http_parser.rb#1](https://github.com/tmm1/http_parser.rb/pull/1))
@@ -204,3 +205,4 @@ Ideas
 - Foreman support
 - Daemonizing and dropping privileges
 - Trailing headers
+- REPL for Server and Client
