@@ -18,7 +18,7 @@ module Hatetepe
     end
     
     def to_a
-      [verb, uri, headers, body]
+      [verb, uri, headers, body, http_version]
     end
     
     def to_h
@@ -37,6 +37,8 @@ module Hatetepe
 
         hsh["REQUEST_PATH"], qm, hsh["QUERY_STRING"] = uri.partition("?")
         hsh["PATH_INFO"], hsh["SCRIPT_NAME"] = hsh["REQUEST_PATH"].dup, ""
+        
+        hsh["HTTP_VERSION"] = "HTTP/#{http_version}"
       end
     end
   end

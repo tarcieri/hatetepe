@@ -59,7 +59,7 @@ module Hatetepe
     end
     
     def request(req)
-      request_line req[0], req[1]
+      request_line req[0], req[1], (req[4] || "1.1")
       headers req[2]
       body req[3] if req[3]
       complete
@@ -89,7 +89,7 @@ module Hatetepe
     end
     
     def header(name, value)
-      raw_header "#{name}: #{value}"
+      raw_header "#{name}: #{value}" unless value.empty?
     end
     
     def headers(hash)

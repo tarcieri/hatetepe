@@ -8,12 +8,15 @@ describe Hatetepe::Server, "with Keep-Alive" do
     
     FakeFS.activate!
     File.open "config.ru", "w" do |f|
-      f.write 'run proc {|env| [200, {"Content_Type" => "text/plain"}, []] }'
+      f.write 'run proc {|env| [200, {"Content-Type" => "text/plain"}, []] }'
     end
   end
   
   after do
+    #ap $stderr.string
     $stderr = STDERR
+    
+    ENV.delete "AP_SYNC_CALLER"
     
     FakeFS.deactivate!
     FakeFS::FileSystem.clear
@@ -27,77 +30,71 @@ describe Hatetepe::Server, "with Keep-Alive" do
     Hatetepe::Server.any_instance
   end
   
-  it "keeps the connection open for 5 seconds by default" do
-    command "-p 30001", 5.1 do
-      server.should_not_receive :close_connection
-      client.get("/").status.should equal(200)
-      EM::Synchrony.sleep 4.9
-      
-      server.should_receive :close_connection
+  it "keeps the connection open for 1 seconds by default" do
+    command "-p 30001", 1.1 do
+      client
+      EM::Synchrony.sleep 0.95
+      client.should_not be_closed
       EM::Synchrony.sleep 0.1
-      
-      EM.stop
+      client.should be_closed
     end
   end
   
-  describe "and :keepalive option" do
+  describe "and :timeout option" do
     it "times out the connection after the specified amount of time" do
-      command "-p 30001 -k 1.5", 1.6 do
-        server.should_not_receive :stop!
+      command "-p 30001 -t 0.5", 0.6 do
         client
-        sleep 1.45
-        server.should_receive :stop!
-        sleep 0.05
-        
-        EM.stop
+        EM::Synchrony.sleep 0.45
+        client.should_not be_closed
+        EM::Synchrony.sleep 0.1
+        client.should be_closed_by_remote
       end
     end
   end
   
-  describe "and :keepalive option set to 0" do
+  describe "and :timeout option set to 0" do
     it "keeps the connection open until the client closes it" do
-      command "-p 30001 -k 0", 6 do
-        server.should_not_receive :stop!
+      command "-p 30001 -t 0", 2 do
         client
-        sleep 5.95
-        server.should_receive :stop!
-        
-        EM.stop
+        EM::Synchrony.sleep 1.95
+        client.should_not be_closed
       end
     end
   end
   
   it "closes the connection if the client sends Connection: close" do
-    command "-p 30001", 0.1 do
-      server.should_receive :stop!
+    command "-p 30001" do
       client.get("/", "Connection" => "close").tap do |response|
         response.headers["Connection"].should == "close"
+        EM::Synchrony.sync response.body
+        client.should be_closed_by_remote
       end
-      
-      EM.stop
     end
   end
   
   it "sends Connection: keep-alive if the client also sends it" do
-    command "-p 30001", 0.1 do
+    command "-p 30001" do
       client.get("/", "Connection" => "keep-alive").tap do |response|
         response.headers["Connection"].should == "keep-alive"
       end
-      
-      EM.stop
     end
   end
   
-  [1.0, 0.9].each do |version|
+  ["1.0", "0.9"].each do |version|
     describe "and an HTTP #{version} client" do
+      after { ENV.delete "DEBUG_KEEP_ALIVE" }
+      
       it "closes the connection after one request" do
-        command "-p 30001", 0.1 do
-          server.should_receive :stop!
-          client.get("/", {}, nil, version).tap do |response|
+        pending "http_parser.rb doesn't parse HTTP/0.9" if version == "0.9"
+        
+        ENV["DEBUG_KEEP_ALIVE"] = "yes please"
+        
+        command "-p 30001" do
+          client.get("/", {"Connection" => ""}, nil, version).tap do |response|
             response.headers["Connection"].should == "close"
+            EM::Synchrony.sync response.body
+            client.should be_closed_by_remote
           end
-          
-          EM.stop
         end
       end
     end

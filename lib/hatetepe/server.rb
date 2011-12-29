@@ -26,7 +26,7 @@ class Hatetepe::Server
   
   def initialize(config)
     @config = {:timeout => 1}.merge(config)
-    @errors = config.delete(:errors) || $stderr
+    @errors = @config.delete(:errors) || $stderr
 
     super
   end
@@ -38,34 +38,46 @@ class Hatetepe::Server
     parser.on_request << requests.method(:<<)
     parser.on_headers << method(:process)
 
+    # XXX check if the connection is still present
     builder.on_write << method(:send_data)
     #builder.on_write {|data| p "server >> #{data}" }
 
     @app = Rack::Builder.new.tap do |b|
-      b.use KeepAlive
+      # middleware is NOT ordered alphabetically
       b.use Pipeline
       b.use App
+      b.use KeepAlive
       b.use Proxy
       b.run config[:app]
     end.to_app
     
-    set_comm_inactivity_timeout config[:timeout]
+    self.processing_enabled = true
+    self.comm_inactivity_timeout = config[:timeout]
   end
   
   def receive_data(data)
     #p "server << #{data}"
     parser << data
-  rescue Hatetepe::ParserError
+  rescue Hatetepe::ParserError => ex
+    raise ex if ENV["RACK_ENV"] == "testing"
     close_connection
   rescue Exception => ex
+    raise ex if ENV["RACK_ENV"] == "testing"
     close_connection_after_writing
     backtrace = ex.backtrace.map {|line| "\t#{line}" }.join("\n")
     errors << "#{ex.class}: #{ex.message}\n#{backtrace}\n"
     errors.flush
   end
   
+  # XXX fail response bodies properly
+  # XXX make sure no more data is sent
+  def unbind
+    super
+    #requests.map(&:body).each &:fail
+  end
+  
   def process(*)
-    set_comm_inactivity_timeout 0
+    return unless processing_enabled?
     request = requests.last
     
     env = request.to_h.tap do |e|
@@ -95,7 +107,6 @@ class Hatetepe::Server
   def close_response(request)
     builder.complete
     requests.delete request
-    set_comm_inactivity_timeout config[:timeout] if requests.empty?
   end
     
   def inject_environment(env)
