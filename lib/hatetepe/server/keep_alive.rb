@@ -33,7 +33,7 @@ class Hatetepe::Server
     
     def call_and_keep_alive(env)
       app.call(env).tap do |res|
-        if res[1]["Connection"] && !res[1]["Connection"].empty?
+        if res[1]["Connection"] == "close"
           call_and_close env, res
         else
           res[1]["Connection"] = "keep-alive"
