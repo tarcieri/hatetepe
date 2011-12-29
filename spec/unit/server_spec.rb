@@ -5,7 +5,7 @@ describe Hatetepe::Server do
   let(:server) {
     Hatetepe::Server.allocate.tap {|s|
       s.send :initialize, config
-      s.stub :set_comm_inactivity_timeout
+      s.stub :comm_inactivity_timeout=
       s.post_init
       s.requests << request
     }
@@ -31,7 +31,14 @@ describe Hatetepe::Server do
     }
   }
   
-  before { server.stub :sockaddr => [42424, "127.0.42.1"] }
+  before do
+    server.stub :sockaddr => [42424, "127.0.42.1"]
+    @old_env, ENV["RACK_ENV"] = ENV["RACK_ENV"], "testing"
+  end
+  
+  after do
+    ENV["RACK_ENV"] = @old_env
+  end
   
   it "inherits from Hatetepe::Connection" do
     server.should be_a(Hatetepe::Connection)
@@ -52,7 +59,7 @@ describe Hatetepe::Server do
     it "sets up the error stream" do
       server.send :initialize, config
       server.errors.should equal(errors)
-      config[:errors].should be_nil
+      server.config[:errors].should be_nil
     end
     
     it "uses stderr as default error stream" do
@@ -71,7 +78,7 @@ describe Hatetepe::Server do
     let :server do
       Hatetepe::Server.allocate.tap do |s|
         s.send :initialize, config
-        s.stub :set_comm_inactivity_timeout
+        s.stub :comm_inactivity_timeout=
       end
     end
     
@@ -94,15 +101,15 @@ describe Hatetepe::Server do
     
     it "builds the app" do
       server.post_init
-      server.app.should be_a(Hatetepe::Server::KeepAlive)
-      server.app.app.should be_a(Hatetepe::Server::Pipeline)
-      server.app.app.app.should be_a(Hatetepe::Server::App)
+      server.app.should be_a(Hatetepe::Server::Pipeline)
+      server.app.app.should be_a(Hatetepe::Server::App)
+      server.app.app.app.should be_a(Hatetepe::Server::KeepAlive)
       server.app.app.app.app.should be_a(Hatetepe::Server::Proxy)
       server.app.app.app.app.app.should equal(app)
     end
     
     it "starts the connection inactivity tracking" do
-      server.should_receive(:set_comm_inactivity_timeout).with 0.0123
+      server.should_receive(:comm_inactivity_timeout=).with 0.0123
       server.post_init
     end
   end
@@ -120,14 +127,16 @@ describe Hatetepe::Server do
       server.parser.should_receive(:<<).and_raise(Hatetepe::ParserError)
       server.should_receive :close_connection
       
-      server.receive_data "irrelevant data"
+      expect {
+        server.receive_data "irrelevant data"
+      }.to raise_error(Hatetepe::ParserError)
     end
     
     it "closes the connection when catching an exception" do
       server.parser.should_receive(:<<).and_raise
       server.should_receive :close_connection_after_writing
       
-      server.receive_data ""
+      expect { server.receive_data "" }.to raise_error
     end
     
     it "logs caught exceptions" do
@@ -137,13 +146,11 @@ describe Hatetepe::Server do
       }
       errors.should_receive :flush
       
-      server.receive_data ""
+      expect { server.receive_data "" }.to raise_error
     end
   end
   
   context "#process" do
-    before { app.stub :call => [-1]}
-    
     it "puts useful stuff into env[]" do
       app.should_receive(:call) {|e|
         e.should equal(env)
@@ -174,11 +181,6 @@ describe Hatetepe::Server do
         Fiber.current.should_not equal(outer_fiber)
         [-1]
       }
-      server.process
-    end
-    
-    it "pauses the connection inactivity tracking" do
-      server.should_receive(:set_comm_inactivity_timeout).with 0
       server.process
     end
   end
@@ -277,21 +279,6 @@ describe Hatetepe::Server do
         [-1]
       }
       server.process
-    end
-  end
-  
-  describe "#close_response(request)" do
-    before { server.requests << stub("a pending request") }
-    
-    it "doesn't restart the tracking if there are other requests being processed" do
-      server.should_not_receive :set_comm_inactivity_timeout
-      server.close_response request
-    end
-    
-    it "restarts the connection inactivitiy tracking" do
-      server.requests.clear
-      server.should_receive(:set_comm_inactivity_timeout).with config[:timeout]
-      server.close_response request
     end
   end
 end

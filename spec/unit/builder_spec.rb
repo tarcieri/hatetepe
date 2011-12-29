@@ -78,7 +78,7 @@ describe Hatetepe::Builder do
     before { builder.send :initialize }
     
     it "is a shortcut for #request_line, #headers, #body, #complete" do
-      builder.should_receive(:request_line).with req[0], req[1]
+      builder.should_receive(:request_line).with req[0], req[1], "1.1"
       builder.should_receive(:headers).with req[2]
       builder.should_receive(:body).with req[3]
       builder.should_receive :complete
@@ -86,7 +86,7 @@ describe Hatetepe::Builder do
     end
     
     it "doesn't require a body (fourth element)" do
-      builder.should_receive(:request_line).with req[0], req[1]
+      builder.should_receive(:request_line).with req[0], req[1], "1.1"
       builder.should_receive(:headers).with req[2]
       builder.should_not_receive :body
       builder.request req[0..2]
@@ -142,7 +142,7 @@ describe Hatetepe::Builder do
     before { builder.send :initialize }
     
     it "is a shortcut for #response_line, #headers, #body, #complete" do
-      builder.should_receive(:response_line).with res[0]
+      builder.should_receive(:response_line).with res[0], "1.1"
       builder.should_receive(:headers).with res[1]
       builder.should_receive(:body).with res[2]
       builder.should_receive :complete
@@ -150,7 +150,7 @@ describe Hatetepe::Builder do
     end
     
     it "doesn't require a body (third element)" do
-      builder.should_receive(:response_line).with res[0]
+      builder.should_receive(:response_line).with res[0], "1.1"
       builder.should_receive(:headers).with res[1]
       builder.should_not_receive :body
       builder.response res[0..1]

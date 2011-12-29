@@ -1,3 +1,5 @@
+require "rack/utils"
+
 module Hatetepe
   class BuilderError < StandardError; end
   
@@ -72,7 +74,7 @@ module Hatetepe
     end
     
     def response(res)
-      response_line res[0]
+      response_line res[0], (res[3] || "1.1")
       headers res[1]
       body res[2] if res[2]
       complete
@@ -89,6 +91,7 @@ module Hatetepe
     end
     
     def header(name, value)
+      value = String(value)
       raw_header "#{name}: #{value}" unless value.empty?
     end
     

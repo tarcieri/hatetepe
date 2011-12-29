@@ -59,14 +59,14 @@ class Hatetepe::Server
     #p "server << #{data}"
     parser << data
   rescue Hatetepe::ParserError => ex
-    raise ex if ENV["RACK_ENV"] == "testing"
     close_connection
-  rescue Exception => ex
     raise ex if ENV["RACK_ENV"] == "testing"
+  rescue Exception => ex
     close_connection_after_writing
     backtrace = ex.backtrace.map {|line| "\t#{line}" }.join("\n")
     errors << "#{ex.class}: #{ex.message}\n#{backtrace}\n"
     errors.flush
+    raise ex if ENV["RACK_ENV"] == "testing"
   end
   
   # XXX fail response bodies properly
