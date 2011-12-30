@@ -49,6 +49,8 @@ describe Hatetepe::Server::App do
     }
     
     it "responds with 500 when catching an error" do
+      ENV.delete "RACK_ENV"
+      
       inner_app.stub(:call) { raise }
       app.should_receive(:postprocess) {|e, res|
         res.should == error_response
@@ -59,10 +61,6 @@ describe Hatetepe::Server::App do
     
     describe "if server's :env option is testing" do
       let(:error) { StandardError.new }
-      
-      before { @old_env, ENV["RACK_ENV"] = ENV["RACK_ENV"], "testing" }
-      
-      after { ENV["RACK_ENV"] = @old_env }
       
       it "doesn't catch errors" do
         inner_app.stub(:call) { raise error }

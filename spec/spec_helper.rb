@@ -6,6 +6,10 @@ require "em-synchrony"
 require "fakefs/safe"
 
 RSpec.configure do |config|
+  config.before :each do
+    ENV["RACK_ENV"] = "testing"
+  end
+  
   config.before :all do
     EM.class_eval do
       class << self
