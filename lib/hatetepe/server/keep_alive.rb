@@ -7,11 +7,6 @@ class Hatetepe::Server
     end
     
     def call(env)
-      # XXX think about the timeout stuff
-      extract_connection(env).tap do |conn|
-        conn.comm_inactivity_timeout = 0
-      end
-      
       m = case env["HTTP_CONNECTION"].to_s.downcase
         when "close" then :close
         when "keep-alive" then :keep_alive
@@ -28,22 +23,31 @@ class Hatetepe::Server
       req.callback &conn.method(:close_connection_after_writing)
       req.errback &conn.method(:close_connection_after_writing)
       
-      response || app.call(env).tap {|res| res[1]["Connection"] = "close" }
+      if response
+        response[1]["Connection"] = "close"
+      else
+        stream_start = env["stream.start"]
+        env["stream.start"] = proc do |res|
+          res[1]["Connection"] = "close"
+          stream_start.call res
+        end
+      end
+      
+      response || app.call(env)
     end
     
     def call_and_keep_alive(env)
-      app.call(env).tap do |res|
+      stream_start = env["stream.start"]
+      env["stream.start"] = proc do |res|
         if res[1]["Connection"] == "close"
           call_and_close env, res
         else
           res[1]["Connection"] = "keep-alive"
-          
-          # XXX think about the timeout stuff 
-          extract_connection(env).tap do |conn|
-            conn.comm_inactivity_timeout = conn.config[:timeout]
-          end
         end
+        stream_start.call res
       end
+      
+      app.call env
     end
     
     def extract_request(env)

@@ -80,6 +80,11 @@ class Hatetepe::Server
     return unless processing_enabled?
     request = requests.last
     
+    self.comm_inactivity_timeout = 0
+    reset_timeout = proc { self.comm_inactivity_timeout = config[:timeout] }
+    request.callback &reset_timeout
+    request.errback &reset_timeout
+    
     env = request.to_h.tap do |e|
       inject_environment e
       e["stream.start"] = proc do |response|
@@ -103,10 +108,9 @@ class Hatetepe::Server
     builder.headers response[1]
   end
   
-  # TODO delete request in env[stream.close]
   def close_response(request)
     builder.complete
-    requests.delete request
+    requests.delete(request).succeed
   end
     
   def inject_environment(env)

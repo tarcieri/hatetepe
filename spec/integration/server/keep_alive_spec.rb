@@ -13,10 +13,7 @@ describe Hatetepe::Server, "with Keep-Alive" do
   end
   
   after do
-    #ap $stderr.string
     $stderr = STDERR
-    
-    ENV.delete "AP_SYNC_CALLER"
     
     FakeFS.deactivate!
     FakeFS::FileSystem.clear
