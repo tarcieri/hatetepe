@@ -49,9 +49,8 @@ class Hatetepe::Client
   def receive_data(data)
     #p "client << #{data}"
     parser << data
-  # XXX catching all errors might hide those thrown from middleware above app
-  rescue Hatetepe::ParserError => e
-    stop!
+  rescue => e
+    close_connection
     raise e
   end
   
@@ -75,22 +74,24 @@ class Hatetepe::Client
     end
   end
   
-  # XXX does #fail/#succeed without an argument (= without a response) mean that
-  #     we have to check for nil in #receive_response and in each middleware?
   def <<(request)
-    request.fail unless processing_enabled?
+    request.connection = self
+    unless processing_enabled?
+      request.fail
+      return
+    end
+    
+    requests << request
     
     Fiber.new do
-      request.connection = self
-      requests << request
       begin
         pending_transmission[request.object_id] = EM::DefaultDeferrable.new
         
         app.call(request).tap do |response|
           request.response = response
           # XXX check for response.nil?
-          request.send (response.success? ? :succeed : :fail), response
-          requests.delete request
+          status = (response && response.success?) ? :succeed : :fail
+          requests.delete(request).send status, response
         end
       ensure
         pending_transmission.delete request.object_id
@@ -126,7 +127,6 @@ class Hatetepe::Client
     close_connection
   end
   
-  # XXX make sure no more data is sent
   def unbind
     super
     
@@ -141,9 +141,8 @@ class Hatetepe::Client
         if req.response
           req.response.body.tap {|b| b.close_write unless b.closed_write? }
         end
-        # 
-        # XXX see #<<
-        # XXX FiberError: dead fiber called because req already succeeded (or failed)
+        # XXX FiberError: dead fiber called because req already succeeded
+        #     or failed, see github.com/eventmachine/eventmachine/issues/287
         req.fail req.response
       end
     end

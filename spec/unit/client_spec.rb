@@ -9,8 +9,8 @@ describe Hatetepe::Client do
   
   let(:uri) { "http://example.net:8080/foo" }
   let(:parsed_uri) { URI.parse uri }
-  let(:request) { stub "request", :response => nil, :to_a => request_as_array }
-  let(:request_as_array) { stub "request_as_array" }
+  let(:request) { Hatetepe::Request.new *request_as_array }
+  let(:request_as_array) { ["GET", "/foo", {"Host" => "example.net:8080"}, [], "1.1"] }
   let(:headers) { {} }
   let(:body) { stub "body" }
   let(:response) { Hatetepe::Response.new 200 }
@@ -54,6 +54,11 @@ describe Hatetepe::Client do
       client.builder.on_write[0].should == client.method(:send_data)
       client.parser.on_response[0].should == client.method(:receive_response)
     end
+    
+    it "enables processing" do
+      client.post_init
+      client.processing_enabled.should be_true
+    end
   end
   
   describe "#receive_data(data)" do
@@ -68,7 +73,7 @@ describe Hatetepe::Client do
     
     it "stops the client if it catches an error" do
       client.parser.should_receive(:<<).and_raise error
-      client.should_receive :stop!
+      client.should_receive :close_connection
       proc { client.receive_data data }.should raise_error(error)
     end
   end
@@ -125,12 +130,17 @@ describe Hatetepe::Client do
     
     before do
       client.stub :requests => requests
-      client.pending_response[id] = stub("entry")
+      client.pending_response[id] = stub("entry", :succeed => nil)
     end
     
     it "succeeds the pending response list entry of the first request without a response" do
       client.pending_response[id].should_receive(:succeed).with response
       client.receive_response response
+    end
+    
+    it "associates the response with the corresponding request" do
+      client.receive_response response
+      request.response.should equal(response)
     end
   end
   
@@ -139,7 +149,7 @@ describe Hatetepe::Client do
     let(:app) { stub "app", :call => response }
     
     before do
-      request.stub :connection= => nil, :response= => nil, :succeed => nil
+      client.processing_enabled = true
       client.stub :app => app
       Fiber.stub(:new) {|blk| blk.call; fiber }
     end
@@ -150,8 +160,20 @@ describe Hatetepe::Client do
     end
     
     it "adds the request to the requests list" do
+      app.should_receive :call do
+        client.requests[-1].should equal(request)
+      end
       client << request
-      client.requests.last.should equal(request)
+      client.requests.should be_empty
+    end
+    
+    it "fails and ignores the request if processing is disabled" do
+      client.processing_enabled = false
+      request.should_receive :fail
+      app.should_not_receive :call
+      
+      client << request
+      request.connection.should equal(client)
     end
     
     it "adds the request to the pending transmission list" do
@@ -182,7 +204,9 @@ describe Hatetepe::Client do
       client << request
     end
     
-    it "makes sure the request gets remove from the pending transmission list" do
+    it "fails the request if no response has been received"
+    
+    it "makes sure the request gets removed from the pending transmission list" do
       app.should_receive(:call).and_raise StandardError
       client << request rescue nil
       client.pending_transmission.should be_empty
@@ -296,15 +320,8 @@ describe Hatetepe::Client do
     it "waits for the last request to complete and then stops" do
       EM::Synchrony.should_receive(:sync).with(client.requests.last) { response }
       EM::Synchrony.should_receive(:sync).with response.body
-      client.should_receive :stop!
-      client.stop
-    end
-  end
-  
-  describe "#stop!" do
-    it "closes the connection" do
       client.should_receive :close_connection
-      client.stop!
+      client.stop
     end
   end
   
@@ -346,7 +363,7 @@ describe Hatetepe::Client do
     
     before do
       Hatetepe::Client.stub :start => client
-      client.stub :request => response
+      client.stub :request => response, :stop => nil
     end
     
     it "starts a client" do
@@ -362,10 +379,7 @@ describe Hatetepe::Client do
     end
     
     it "stops the client when the response has finished" do
-      response.body.should_receive :callback do |&blk|
-        client.should_receive :stop
-        blk.call
-      end
+      client.should_receive :stop
       Hatetepe::Client.request :get, uri
     end
   end
