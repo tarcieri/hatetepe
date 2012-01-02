@@ -81,7 +81,9 @@ class Hatetepe::Server
     request = requests.last
     
     self.comm_inactivity_timeout = 0
-    reset_timeout = proc { self.comm_inactivity_timeout = config[:timeout] }
+    reset_timeout = proc do
+      self.comm_inactivity_timeout = config[:timeout] if requests.empty?
+    end
     request.callback &reset_timeout
     request.errback &reset_timeout
     

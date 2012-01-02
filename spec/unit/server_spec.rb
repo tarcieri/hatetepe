@@ -10,7 +10,7 @@ describe Hatetepe::Server do
       s.requests << request
     }
   }
-  let(:request) { stub "request", :to_h => env }
+  let(:request) { stub "request", :to_h => env, :callback => nil, :errback => nil }
   let(:env) {
     {
       "rack.input" => Hatetepe::Body.new
@@ -112,10 +112,18 @@ describe Hatetepe::Server do
       server.should_receive(:comm_inactivity_timeout=).with 0.0123
       server.post_init
     end
+    
+    it "enables request processing" do
+      server.post_init
+      server.processing_enabled.should be_true
+    end
   end
   
   context "#receive_data(data)" do
-    before { server.stub :close_connection_after_writing }
+    before do
+      ENV.delete "RACK_ENV"
+      server.stub :close_connection
+    end
     
     it "feeds data into the parser" do
       data = stub("data")
@@ -127,16 +135,30 @@ describe Hatetepe::Server do
       server.parser.should_receive(:<<).and_raise(Hatetepe::ParserError)
       server.should_receive :close_connection
       
+      server.receive_data "irrelevant data"
+    end
+    
+    it "re-raises parsing errors if RACK_ENV is testing" do
+      ENV["RACK_ENV"] = "testing"
+      server.parser.should_receive(:<<).and_raise Hatetepe::ParserError
+      
       expect {
         server.receive_data "irrelevant data"
       }.to raise_error(Hatetepe::ParserError)
     end
     
     it "closes the connection when catching an exception" do
-      server.parser.should_receive(:<<).and_raise
+      server.parser.should_receive(:<<).and_raise Exception
       server.should_receive :close_connection_after_writing
       
-      expect { server.receive_data "" }.to raise_error
+      server.receive_data ""
+    end
+    
+    it "re-raises caught exceptions" do
+      ENV["RACK_ENV"] = "testing"
+      server.parser.should_receive(:<<).and_raise Exception
+      
+      expect { server.receive_data "" }.to raise_error(Exception)
     end
     
     it "logs caught exceptions" do
@@ -146,7 +168,7 @@ describe Hatetepe::Server do
       }
       errors.should_receive :flush
       
-      expect { server.receive_data "" }.to raise_error
+      server.receive_data ""
     end
   end
   
@@ -183,6 +205,16 @@ describe Hatetepe::Server do
       }
       server.process
     end
+    
+    it "is a no-op if processing is disabled" do
+      server.processing_enabled = false
+      app.should_not_receive :call
+      server.process
+    end
+    
+    it "disables the connection timeout until the request is finished"
+    
+    it "doesn't disable the connection timeout if there are other requests left"
   end
   
   context "env[stream.start].call(response)" do
@@ -210,11 +242,15 @@ describe Hatetepe::Server do
     end
     
     it "waits for the previous request's response to finish" do
+      pending "This should be moved to a Server::Pipeline spec"
+      
       server.builder.should_not_receive :response
       server.process
     end
     
     it "initiates the response" do
+      pending "This should be moved to a Server#start_response spec"
+
       server.builder.should_receive(:response_line) {|code|
         code.should equal(response[0])
       }
@@ -244,6 +280,8 @@ describe Hatetepe::Server do
     }
     
     it "completes the response" do
+      pending "This should be moved to a Server#close_response spec"
+      
       server.builder.should_receive :complete
       app.stub(:call) {|e|
         e["stream.close"].call
@@ -253,6 +291,8 @@ describe Hatetepe::Server do
     end
     
     it "succeeds the request" do
+      pending "This should be moved to a Server#close_response spec"
+
       request.should_receive :succeed
       app.stub(:call) {|e|
         e["stream.close"].call
@@ -280,5 +320,11 @@ describe Hatetepe::Server do
       }
       server.process
     end
+  end
+  
+  context "#start_response(response)"
+  
+  context "#close_response(request)" do
+    it "removes the request from the request queue"
   end
 end
