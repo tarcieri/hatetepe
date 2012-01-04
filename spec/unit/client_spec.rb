@@ -204,7 +204,11 @@ describe Hatetepe::Client do
       client << request
     end
     
-    it "fails the request if no response has been received"
+    it "fails the request if no response has been received" do
+      app.stub :call => nil
+      request.should_receive(:fail).with nil
+      client << request
+    end
     
     it "makes sure the request gets removed from the pending transmission list" do
       app.should_receive(:call).and_raise StandardError

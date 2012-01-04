@@ -10,12 +10,8 @@ describe Hatetepe::Server do
       s.requests << request
     }
   }
-  let(:request) { stub "request", :to_h => env, :callback => nil, :errback => nil }
-  let(:env) {
-    {
-      "rack.input" => Hatetepe::Body.new
-    }
-  }
+  let(:request) { Hatetepe::Request.new :get, "/" }
+  let(:env) { request.to_h }
   
   let(:app) { stub "app" }
   let(:host) { "127.0.4.1" }
@@ -173,6 +169,11 @@ describe Hatetepe::Server do
   end
   
   context "#process" do
+    before do
+      request.stub :to_h => env
+      app.stub :call => [-1]
+    end
+    
     it "puts useful stuff into env[]" do
       app.should_receive(:call) {|e|
         e.should equal(env)
@@ -212,9 +213,25 @@ describe Hatetepe::Server do
       server.process
     end
     
-    it "disables the connection timeout until the request is finished"
+    let(:another_request) { Hatetepe::Request.new :get, "/asdf" }
     
-    it "doesn't disable the connection timeout if there are other requests left"
+    it "disables the connection timeout until the last request is finished" do
+      server.requests << another_request
+      
+      server.should_receive(:comm_inactivity_timeout=).with 0
+      server.process
+      
+      server.should_not_receive(:comm_inactivity_timeout=).with config[:timeout]
+      server.requests.delete request
+      request.succeed
+      
+      server.rspec_verify
+      server.rspec_reset
+      
+      server.should_receive(:comm_inactivity_timeout=).with config[:timeout]
+      server.requests.delete another_request
+      another_request.succeed
+    end
   end
   
   context "env[stream.start].call(response)" do
@@ -241,24 +258,9 @@ describe Hatetepe::Server do
       server.process
     end
     
+    # TODO this should be moved to a Server::Pipeline spec
     it "waits for the previous request's response to finish" do
-      pending "This should be moved to a Server::Pipeline spec"
-      
       server.builder.should_not_receive :response
-      server.process
-    end
-    
-    it "initiates the response" do
-      pending "This should be moved to a Server#start_response spec"
-
-      server.builder.should_receive(:response_line) {|code|
-        code.should equal(response[0])
-      }
-      server.builder.should_receive(:headers) {|headers|
-        headers["Key"].should equal(response[1]["Key"])
-        headers["Server"].should == "hatetepe/#{Hatetepe::VERSION}"
-      }
-      previous.succeed
       server.process
     end
   end
@@ -278,28 +280,6 @@ describe Hatetepe::Server do
       server.builder.stub :complete
       request.stub :succeed
     }
-    
-    it "completes the response" do
-      pending "This should be moved to a Server#close_response spec"
-      
-      server.builder.should_receive :complete
-      app.stub(:call) {|e|
-        e["stream.close"].call
-        [-1]
-      }
-      server.process
-    end
-    
-    it "succeeds the request" do
-      pending "This should be moved to a Server#close_response spec"
-
-      request.should_receive :succeed
-      app.stub(:call) {|e|
-        e["stream.close"].call
-        [-1]
-      }
-      server.process
-    end
     
     it "leaves the connection open" do
       server.should_not_receive :close_connection
@@ -322,9 +302,54 @@ describe Hatetepe::Server do
     end
   end
   
-  context "#start_response(response)"
+  context "#start_response(response)" do
+    let(:previous) { EM::DefaultDeferrable.new }
+    let(:response) { [200, {"Key" => "value"}, Rack::STREAMING] }
+    
+    before {
+      server.requests.unshift previous
+      app.stub(:call) {|e| response }
+      request.stub :succeed
+      server.builder.stub :response_line
+      server.builder.stub :headers
+    }
+    
+    it "initiates the response" do
+      server.builder.should_receive(:response_line) {|code|
+        code.should equal(response[0])
+      }
+      server.builder.should_receive(:headers) {|headers|
+        headers["Key"].should equal(response[1]["Key"])
+        headers["Server"].should == "hatetepe/#{Hatetepe::VERSION}"
+      }
+      previous.succeed
+      server.process
+    end
+  end
   
   context "#close_response(request)" do
-    it "removes the request from the request queue"
+    before do
+      server.builder.stub :complete
+      request.stub :succeed
+      app.stub :call do |e|
+        e["stream.close"].call
+        [-1]
+      end
+    end
+    
+    it "removes the request from the request queue" do
+      server.process
+      server.requests.should be_empty
+    end
+    
+    it "completes the response" do
+      server.builder.should_receive :complete
+      server.process
+    end
+    
+    it "succeeds the request" do
+      request.should_receive :succeed
+      server.process
+    end
   end
 end
