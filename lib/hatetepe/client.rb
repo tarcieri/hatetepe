@@ -167,7 +167,7 @@ class Hatetepe::Client
     end
     
     def request(verb, uri, headers = {}, body = nil)
-      uri = URI.parse(uri)
+      uri = URI(uri)
       client = start(:host => uri.host, :port => uri.port)
       
       headers["X-Hatetepe-Single"] = true
