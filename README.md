@@ -39,8 +39,10 @@ Getting Started (Client)
 The `Hatetepe::Client` class can be used to make requests to an HTTP server.
 
     client = Hatetepe::Client.start(:host => "example.org", :port => 80)
+
     request = Hatetepe::Request.new(:post, "/search", {}, :q => "herp derp")
     client << request
+
     request.callback do |response|
       puts "Results:"
       puts response.body.read
