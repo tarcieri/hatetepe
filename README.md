@@ -11,7 +11,7 @@ Install it via `gem install hatetepe` or add `gem "hatetepe"` to your Gemfile.
 Hatetepe only implements core HTTP functionality. If you need stuff like
 automatic JSON or form-data encoding, have a look at
 [Faraday](https://github.com/technoweenie/faraday), there's also an
-[Hatetepe adapter](https://github.com/lgierth/faraday/tree/hatetepe-support)
+[Hatetepe adapter](https://github.com/technoweenie/faraday/pull/108)
 for it being worked on.
 
 [![Build status](https://secure.travis-ci.org/lgierth/hatetepe.png?branch=master)](http://travis-ci.org/lgierth/hatetepe)
