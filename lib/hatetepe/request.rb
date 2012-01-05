@@ -1,3 +1,4 @@
+require "hatetepe/deferred_status_fix"
 require "hatetepe/message"
 
 module Hatetepe

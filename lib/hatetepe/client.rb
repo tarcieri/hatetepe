@@ -5,6 +5,7 @@ require "uri"
 
 require "hatetepe/builder"
 require "hatetepe/connection"
+require "hatetepe/deferred_status_fix"
 require "hatetepe/parser"
 require "hatetepe/request"
 require "hatetepe/version"
