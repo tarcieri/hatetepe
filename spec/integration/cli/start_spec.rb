@@ -98,4 +98,24 @@ describe "The `hatetepe start' command" do
       end
     end
   end
+  
+  ["--timeout", "-t"].each do |opt|
+    describe "with #{opt} option" do
+      let :client do
+        Hatetepe::Client.start :host => "127.0.0.1", :port => 3000
+      end
+      
+      it "times out a connection after the specified amount of seconds" do
+        command "#{opt} 0.5", 1 do
+          client.should_not be_closed
+
+          EM::Synchrony.sleep 0.45
+          client.should_not be_closed
+
+          EM::Synchrony.sleep 0.1
+          client.should be_closed_by_remote
+        end
+      end
+    end
+  end
 end

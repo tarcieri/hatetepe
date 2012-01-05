@@ -61,8 +61,4 @@ describe Hatetepe::Connection do
       conn.should_not be_closed_by_remote
     end
   end
-  
-  describe "#closed_by_timeout?" do
-    it "would be nice to have. But how?"
-  end
 end

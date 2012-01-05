@@ -22,6 +22,8 @@ module Hatetepe
       :banner => "Load specified rackup (.ru) file (default: config.ru)"
     method_option :env, :aliases => "-e", :type => :string,
       :banner => "Boot the app in the specified environment (default: development)"
+    method_option :timeout, :aliases => "-t", :type => :numeric,
+      :banner => "Time out connections after the specified admount of seconds (default: 1)"
     def start
       require "hatetepe/server"
       
@@ -49,7 +51,8 @@ module Hatetepe
           :app => app,
           :errors => $stderr,
           :host => host,
-          :port => port
+          :port => port,
+          :timeout => (options[:timeout] || 1)
         })
       end
     end

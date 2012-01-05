@@ -2,6 +2,9 @@ require "eventmachine"
 
 module Hatetepe
   class Connection < EM::Connection
+    attr_accessor :processing_enabled
+    alias_method :processing_enabled?, :processing_enabled
+    
     def remote_address
       sockaddr && sockaddr[1]
     end
@@ -31,6 +34,7 @@ module Hatetepe
       super after_writing
     end
     
+    # TODO how to detect closed-by-timeout?
     def unbind
       @closed_by = :remote unless closed?
     end

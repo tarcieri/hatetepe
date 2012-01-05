@@ -51,16 +51,17 @@ RSpec.configure do |config|
     EM.spec_hooks << proc do
       EM.add_timer(timeout) do
         EM.stop
-        fail "Timeout exceeded (#{location})" unless finished
+        fail "Timeout exceeded" unless finished
       end
     end
     EM.spec_hooks << proc do
       expectations.call
       finished = true
+      EM.next_tick { EM.stop }
     end
   end
   
-  def command(opts, timeout = 0.05, &expectations)
+  def command(opts, timeout = 0.5, &expectations)
     secure_reactor timeout, &expectations
     Hatetepe::CLI.start opts.split
   end

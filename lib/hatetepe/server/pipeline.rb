@@ -10,17 +10,12 @@ class Hatetepe::Server
     end
     
     def call(env)
-      previous, request = env["hatetepe.connection"].requests.values_at(-2, -1)
-      blocks = env.values_at("stream.start", "stream.close")
+      previous = env["hatetepe.connection"].requests[-2]
       
+      stream_start = env["stream.start"]
       env["stream.start"] = proc do |response|
         EM::Synchrony.sync previous if previous
-        blocks[0].call response
-      end
-      
-      env["stream.close"] = proc do
-        blocks[1].call
-        request.succeed
+        stream_start.call response
       end
       
       app.call env
