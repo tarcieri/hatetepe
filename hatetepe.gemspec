@@ -21,6 +21,8 @@ Gem::Specification.new do |s|
   
   s.add_development_dependency "rspec"
   s.add_development_dependency "fakefs"
+  s.add_development_dependency "yard"
+  s.add_development_dependency "rdiscount"
 
   s.files         = `git ls-files`.split("\n") - [".gitignore", ".rspec", ".travis.yml", ".yardopts"]
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
