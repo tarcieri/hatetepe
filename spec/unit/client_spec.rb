@@ -252,35 +252,9 @@ describe Hatetepe::Client do
       end
       client.request :get, uri, "User-Agent" => user_agent
     end
-    
-    describe "with Content-Type: application/x-www-form-urlencoded" do
-      let :headers do
-        {"Content-Type" => "application/x-www-form-urlencoded"}
-      end
-      
-      let :body do
-        [
-          stub("body#1", :length => 12),
-          stub("body#2", :length => 13),
-          stub("body#3", :length => 14)
-        ]
-      end
-      
-      it "computes the body's length" do
-        client.should_receive :<< do |request|
-          request.headers["Content-Length"].should equal(39)
-        end
-        client.request :get, uri, headers, body
-      end
-      
-      it "sets Content-Length to 0 if no body was passed" do
-        client.should_receive :<< do |request|
-          request.headers["Content-Length"].should equal(0)
-        end
-        client.request :get, uri, headers
-      end
-    end
-    
+
+    it "passes the body through #encode_body"
+
     it "doesn't close the body" do
       body.should_not_receive :close_write
       client.request :get, uri, {}, body
@@ -349,6 +323,10 @@ describe Hatetepe::Client do
     it "makes an empty body enumerable" do
       client.wrap_body(nil).should == []
     end
+  end
+
+  describe "#encode_body(headers, body)" do
+    it ""
   end
   
   describe ".start(config)" do

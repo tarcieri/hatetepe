@@ -105,10 +105,7 @@ class Hatetepe::Client
     headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
     
     body = wrap_body(body)
-    if headers["Content-Type"] == "application/x-www-form-urlencoded"
-      enum = Enumerator.new(body)
-      headers["Content-Length"] = enum.inject(0) {|a, e| a + e.length }
-    end
+    headers, body = encode_body(headers.dup, body)
     
     request = Hatetepe::Request.new(verb, uri, headers, body, http_version)
     self << request
@@ -159,6 +156,37 @@ class Hatetepe::Client
     else
       []
     end
+  end
+  
+  def encode_body(headers, body)
+    multipart, urlencoded = false, false
+    if Hash === body
+      query = lambda do |value|
+        case value
+        when Array
+          value.each &query
+        when Hash
+          value.values.each &query
+        when Rack::Multipart::UploadedFile
+          multipart = true
+        end
+      end
+      body.values.each &query
+      urlencoded = !multipart
+    end
+    
+    body = if multipart
+      boundary = Rack::Multipart::MULTIPART_BOUNDARY
+      headers["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
+      [Rack::Multipart.build_multipart(body)]
+    elsif urlencoded
+      headers["Content-Type"] = "application/x-www-form-urlencoded"
+      [Rack::Utils.build_nested_query(body)]
+    else
+      body
+    end
+    
+    [headers, body]
   end
   
   class << self
