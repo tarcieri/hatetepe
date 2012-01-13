@@ -154,6 +154,13 @@ describe Hatetepe::Client do
       Fiber.stub(:new) {|blk| blk.call; fiber }
     end
     
+    it "sets a Host header if none is set" do
+      app.should_receive :call do |req|
+        req.headers["Host"].should == "example.net:8080"
+      end
+      client << request
+    end
+    
     it "sets the request's connection" do
       request.should_receive(:connection=).with client
       client << request
@@ -218,23 +225,9 @@ describe Hatetepe::Client do
   end
   
   describe "#request(verb, uri, headers, body)" do
-    let :config do
-      {
-        :host => "example.org",
-        :port => 8080
-      }
-    end
-    
     before do
       EM::Synchrony.stub :sync
       client.stub :<<
-    end
-    
-    it "sets a Host header if none is set" do
-      client.should_receive :<< do |request|
-        request.headers["Host"].should == "example.org:8080"
-      end
-      client.request :get, uri
     end
     
     it "sets the User-Agent header" do

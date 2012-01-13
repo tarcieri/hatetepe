@@ -76,6 +76,8 @@ class Hatetepe::Client
   end
   
   def <<(request)
+    request.headers["Host"] ||= "#{config[:host]}:#{config[:port]}"
+
     request.connection = self
     unless processing_enabled?
       request.fail
@@ -101,7 +103,6 @@ class Hatetepe::Client
   end
   
   def request(verb, uri, headers = {}, body = nil, http_version = "1.1")
-    headers["Host"] ||= "#{config[:host]}:#{config[:port]}"
     headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
     
     body = wrap_body(body)
@@ -109,7 +110,10 @@ class Hatetepe::Client
     
     request = Hatetepe::Request.new(verb, uri, headers, body, http_version)
     self << request
+
+    # XXX shouldn't this happen in ::request ?
     self.processing_enabled = false
+    
     EM::Synchrony.sync request
     
     request.response.body.close_write if request.verb == "HEAD"
