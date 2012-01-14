@@ -1,8 +1,16 @@
 require "hatetepe"
 
 EM.synchrony do
-  clients = 2.times.map { Hatetepe::Client.start :host => "127.0.0.1", :port => 80 }
+  # one server
+  app = proc do |env|
+    [200, {"Content-Type" => "text/plain"}, ["Hello, world!"]]
+  end
+  Hatetepe::Server.start :host => "127.0.0.1", :port => 3123, :app => app
 
+  # two clients
+  clients = 2.times.map { Hatetepe::Client.start :host => "127.0.0.1", :port => 3123 }
+
+  # six requests
   requests = 6.times.map do |i|
     # no extra headers, empty body
     req = Hatetepe::Request.new(:get, "/", {}, [])
