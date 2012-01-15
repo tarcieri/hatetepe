@@ -5,6 +5,7 @@ require "hatetepe/version"
 Gem::Specification.new do |s|
   s.name        = "hatetepe"
   s.version     = Hatetepe::VERSION
+  s.date        = Date.today.to_s
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Lars Gierth"]
   s.email       = ["lars.gierth@gmail.com"]
