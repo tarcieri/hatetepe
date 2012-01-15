@@ -5,6 +5,7 @@ require "rack"
 require "hatetepe/builder"
 require "hatetepe/connection"
 require "hatetepe/parser"
+require "hatetepe/strings"
 require "hatetepe/version"
 
 module Hatetepe
@@ -17,6 +18,8 @@ require "hatetepe/server/pipeline"
 require "hatetepe/server/proxy"
 
 class Hatetepe::Server
+  include Hatetepe::Strings
+
   def self.start(config)
     EM.start_server config[:host], config[:port], self, config
   end
@@ -60,13 +63,13 @@ class Hatetepe::Server
     parser << data
   rescue Hatetepe::ParserError => ex
     close_connection
-    raise ex if ENV["RACK_ENV"] == "testing"
+    raise ex if ENV[STR_RACK_ENV] == STR_TESTING
   rescue Exception => ex
     close_connection_after_writing
     backtrace = ex.backtrace.map {|line| "\t#{line}" }.join("\n")
     errors << "#{ex.class}: #{ex.message}\n#{backtrace}\n"
     errors.flush
-    raise ex if ENV["RACK_ENV"] == "testing"
+    raise ex if ENV[STR_RACK_ENV] == STR_TESTING
   end
   
   # XXX fail response bodies properly
@@ -89,14 +92,14 @@ class Hatetepe::Server
     
     env = request.to_h.tap do |e|
       inject_environment e
-      e["stream.start"] = proc do |response|
-        e.delete "stream.start"
+      e[STR_STREAM_START] = proc do |response|
+        e.delete STR_STREAM_START
         start_response response
       end
-      e["stream.send"] = builder.method(:body_chunk)
-      e["stream.close"] = proc do
-        e.delete "stream.send"
-        e.delete "stream.close"
+      e[STR_STREAM_SEND] = builder.method(:body_chunk)
+      e[STR_STREAM_CLOSE] = proc do
+        e.delete STR_STREAM_SEND
+        e.delete STR_STREAM_CLOSE
         close_response request
       end
     end
@@ -106,7 +109,7 @@ class Hatetepe::Server
   
   def start_response(response)
     builder.response_line response[0]
-    response[1]["Server"] ||= "hatetepe/#{Hatetepe::VERSION}"
+    response[1][STR_SERVER] ||= STR_VERSION
     builder.headers response[1]
   end
   
@@ -116,22 +119,22 @@ class Hatetepe::Server
   end
     
   def inject_environment(env)
-    env["hatetepe.connection"] = self
-    env["rack.url_scheme"] = "http"
-    env["rack.input"].source = self
-    env["rack.errors"] = errors
+    env[STR_HATETEPE_CONNECTION] = self
+    env[STR_RACK_URL_SCHEME] = "http"
+    env[STR_RACK_INPUT].source = self
+    env[STR_RACK_ERRORS] = errors
     
-    env["rack.multithread"] = false
-    env["rack.multiprocess"] = false
-    env["rack.run_once"] = false
+    env[STR_RACK_MULTITHREAD] = false
+    env[STR_RACK_MULTIPROCESS] = false
+    env[STR_RACK_RUN_ONCE] = false
     
-    env["SERVER_NAME"] = config[:host].dup
-    env["SERVER_PORT"] = String(config[:port])
-    env["REMOTE_ADDR"] = remote_address.dup
-    env["REMOTE_PORT"] = String(remote_port)
+    env[STR_SERVER_NAME] = config[:host].dup
+    env[STR_SERVER_PORT] = String(config[:port])
+    env[STR_REMOTE_ADDR] = remote_address.dup
+    env[STR_REMOTE_PORT] = String(remote_port)
     
-    host = env["HTTP_HOST"] || config[:host].dup
+    host = env[STR_HTTP_HOST] || config[:host].dup
     host += ":#{config[:port]}" unless host.include? ":"
-    env["HTTP_HOST"] = host
+    env[STR_HTTP_HOST] = host
   end
 end
