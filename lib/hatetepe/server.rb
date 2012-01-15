@@ -6,7 +6,6 @@ require "hatetepe/builder"
 require "hatetepe/connection"
 require "hatetepe/parser"
 require "hatetepe/strings"
-require "hatetepe/version"
 
 module Hatetepe
   class Server < Hatetepe::Connection; end
