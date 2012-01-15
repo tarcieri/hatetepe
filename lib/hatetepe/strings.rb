@@ -2,6 +2,7 @@ require "hatetepe/version"
 
 module Hatetepe::Strings
   [
+    # hatetepe/server.rb
     "RACK_ENV",
     "testing",
     "stream.start",
@@ -20,7 +21,7 @@ module Hatetepe::Strings
     "REMOTE_ADDR",
     "REMOTE_PORT",
     "HTTP_HOST"
-  ].each do |str|
+  ].uniq.each do |str|
     const = str.gsub(/[^a-z]/i, "_").upcase.to_sym
     const_set :"STR_#{const}", str.freeze
   end
