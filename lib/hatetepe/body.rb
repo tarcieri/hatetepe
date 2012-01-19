@@ -1,6 +1,8 @@
 require "em-synchrony"
 require "eventmachine"
+require "pathname"
 require "stringio"
+require "tempfile"
 
 require "hatetepe/deferred_status_fix"
 
@@ -9,19 +11,22 @@ module Hatetepe
   class Body
     include EM::Deferrable
     
-    # The wrapped StringIO.
+    # The wrapped File, Tempfile or StringIO.
     attr_reader :io
     
-    # The origin Client or Server connection.
-    attr_accessor :source
-    
+    # A Client or Server connection that's the data source
+    attr_accessor :connection
+
+    # Length of the data, according to its source.
+    attr_accessor :connection_length
+
     # Create a new Body instance.
     #
-    # @param [String] data
-    #   Initial content of the StringIO object.
-    def initialize(data = "")
+    # @param [File|StringIO|Tempfile] io
+    #   IO object that's supposed to be wrapped for async processing.
+    def initialize(io, length = nil)
       @receivers = []
-      @io = StringIO.new(data)
+      @io = io, @length = length
     end
     
     # Blocks until the Body is write-closed.
@@ -29,9 +34,11 @@ module Hatetepe
     # Use this if you want to wait until _all_ of the body has arrived before
     # continuing. It will resume the originating connection if it's paused.
     #
+    # TODO maybe find a better name for this as there's already IO#sync.
+    #
     # @return [undefined]
     def sync
-      source.resume if source && source.paused?
+      connection.resume if connection && connection.paused?
       EM::Synchrony.sync self
     end
     
@@ -43,8 +50,7 @@ module Hatetepe
     # @return [Fixnum]
     #   The StringIO's length.
     def length
-      sync
-      io.length
+      connection_length || (sync; io.length)
     end
     
     # Returns true if the underlying StringIO is empty, false otherwise.
@@ -71,42 +77,8 @@ module Hatetepe
     #
     # @return [undefined]
     def rewind
-      io.rewind
-    end
-    
-    # Forwards to StringIO#close_write.
-    #
-    # Write-closes the body and succeeds, thus releasing all blocking method
-    # calls like #length, #each, #read and #get.
-    #
-    # @return [undefined]
-    def close_write
-      io.close_write
-      succeed
-    end
-    
-    # Forwards to StringIO#closed_write?.
-    #
-    # Returns true if the body is write-closed, false otherwise.
-    #
-    # @return [Boolean]
-    #   True if the body is write-closed, false otherwise.
-    def closed_write?
-      io.closed_write?
-    end
-    
-    # Yields incoming body data.
-    #
-    # Immediately yields all data that has already arrived. Blocks until the
-    # Body is write-closed and yields for each call to #write until then.
-    #
-    # @yield [String] Block to execute for each incoming data chunk.
-    #
-    # @return [undefined]
-    def each(&block)
-      @receivers << block
-      block.call io.string.dup unless io.string.empty?
       sync
+      io.rewind
     end
     
     # Forwards to StringIO#read.
@@ -159,11 +131,51 @@ module Hatetepe
     # @return [Fixnum]
     #   The number of bytes written.
     def write(data)
-      ret = io.write data
-      @receivers.each do |r|
-        Fiber.new { r.call data }.resume
+      # don't write more data than the source connection said it would send.
+      if connection_length && (io.length + data.length > connection_length)
+        data = data[0..(connection_length - io.length)]
+        return if data.empty?
       end
+
+      ret = io.write data
+      @receivers.each {|r| r.resume data }
       ret
     end
+    
+    # Yields incoming body data.
+    #
+    # Immediately yields all data that has already arrived. Blocks until the
+    # Body is write-closed and yields for each call to #write until then.
+    #
+    # @yield [String] Block to execute for each incoming data chunk.
+    #
+    # @return [undefined]
+    def each(&block)
+      receive &block
+      
+      # let the receiver have all the data that has already been received
+      actual_pos = pos
+      io.rewind
+      data = io.read
+      @receivers.each {|r| r.resume data } unless data.empty?
+      io.pos = actual_pos
+
+      sync
+    end
   end
+
+  def receive(&block)
+    @receivers << Fiber.new do |data|
+      begin
+        block.call data
+        data = Fiber.yield
+      end while data
+    end
+  end
+
+  def succeed
+    # let all receivers die
+    @receivers.each {|r| r.resume false }
+
+    super
 end
