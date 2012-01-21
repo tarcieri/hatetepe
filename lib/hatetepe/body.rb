@@ -24,7 +24,7 @@ module Hatetepe
     #
     # @param [File|StringIO|Tempfile] io
     #   IO object that's supposed to be wrapped for async processing.
-    def initialize(io, length = nil)
+    def initialize(io = StringIO.new, length = nil)
       @receivers = []
       @io = io, @length = length
     end
@@ -154,8 +154,7 @@ module Hatetepe
       receive &block
       
       # let the receiver have all the data that has already been received
-      actual_pos = pos
-      io.rewind
+      actual_pos, io.pos = io.pos, 0
       data = io.read
       @receivers.each {|r| r.resume data } unless data.empty?
       io.pos = actual_pos
@@ -165,6 +164,7 @@ module Hatetepe
   end
 
   def receive(&block)
+    # maybe we can reuse the current fiber for this
     @receivers << Fiber.new do |data|
       begin
         block.call data
@@ -178,4 +178,5 @@ module Hatetepe
     @receivers.each {|r| r.resume false }
 
     super
+  end
 end

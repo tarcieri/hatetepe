@@ -57,9 +57,16 @@ class Hatetepe::Client
   
   def send_request(request)
     id = request.object_id
-    
+
+    builder.request_line request.verb, request.uri, request.http_version
+
     request.headers.delete "X-Hatetepe-Single"
-    builder.request request.to_a
+    builder.headers request.headers
+
+    if request.body.connection && request.body.connection_length
+      EM.enable_proxy request.body.connection, self, 0, request.body.connection_length
+    end
+
     pending_transmission[id].succeed
     
     pending_response[id] = EM::DefaultDeferrable.new
@@ -67,11 +74,21 @@ class Hatetepe::Client
   ensure
     pending_response.delete id
   end
+
+  def proxy_completed
+  end
+
+  def proxy_target_unbound
+  end
   
   def receive_response(response)
     requests.find {|req| !req.response }.tap do |req|
       req.response = response
       pending_response[req.object_id].succeed response
+
+      response.connection = self
+      response.body.connection = self
+      pause
     end
   end
   

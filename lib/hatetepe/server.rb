@@ -86,6 +86,10 @@ class Hatetepe::Server
     end
     request.callback &reset_timeout
     request.errback &reset_timeout
+
+    request.connection = self
+    request.body.connection = self
+    pause
     
     env = request.to_h.tap do |e|
       inject_environment e
