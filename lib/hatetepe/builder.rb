@@ -135,6 +135,7 @@ module Hatetepe
         @state = :writing_body
       end
       
+      chunk = chunk.to_s
       if chunked?
         write "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n"
       else
