@@ -12,6 +12,7 @@ module Hatetepe
 end
 
 require "hatetepe/server/app"
+require "hatetepe/server/connection_check"
 require "hatetepe/server/keep_alive"
 require "hatetepe/server/pipeline"
 require "hatetepe/server/proxy"
@@ -46,6 +47,7 @@ class Hatetepe::Server
       # middleware is NOT ordered alphabetically
       b.use Pipeline
       b.use App
+      b.use ConnectionCheck
       b.use KeepAlive
       b.use Proxy
       b.run config[:app]
