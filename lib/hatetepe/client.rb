@@ -122,11 +122,18 @@ class Hatetepe::Client
   end
   
   def stop
-    unless requests.empty?
-      last_response = EM::Synchrony.sync(requests.last)
-      EM::Synchrony.sync last_response.body if last_response.body
-    end
+    wait
     close_connection
+  end
+
+  def wait
+    return if requests.empty?
+    EM::Synchrony.sync requests.last
+    
+    response = requests.last.response
+    if response && response.body
+      EM::Synchrony.sync response.body
+    end
   end
   
   def unbind
