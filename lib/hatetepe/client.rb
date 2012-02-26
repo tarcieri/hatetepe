@@ -203,9 +203,10 @@ class Hatetepe::Client
       client = start(:host => uri.host, :port => uri.port)
       
       headers["X-Hatetepe-Single"] = true
-      client.request(verb, uri.request_uri, headers, body).tap do |*|
-        client.stop
-      end
+      response = client.request(verb, uri.request_uri, headers, body)
+
+      response.body.callback { client.stop }
+      response
     end
   end
   
