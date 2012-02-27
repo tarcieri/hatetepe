@@ -1,6 +1,6 @@
 require "rack/utils"
 
-Rack::Utils::HTTP_STATUS_CODES[499] = "Client Closed Connection"
+Rack::Utils::HTTP_STATUS_CODES[499] = "Client Closed Request"
 
 class Hatetepe::Server
   CONN_CLOSED_RESPONSE = [499, {"Content-Type" => "text/html"},
