@@ -5,222 +5,138 @@ require "uri"
 
 require "hatetepe/builder"
 require "hatetepe/connection"
-require "hatetepe/deferred_status_fix"
 require "hatetepe/parser"
 require "hatetepe/request"
 require "hatetepe/version"
 
 module Hatetepe
-  class Client < Hatetepe::Connection; end
-end
+  class Client < Connection
+    Job = Struct.new(:fiber, :request, :sent, :response)
 
-require "hatetepe/client/keep_alive"
-require "hatetepe/client/pipeline"
+    CONFIG_DEFAULTS = {
+      :host            => "127.0.0.1",
+      :port            => 3000,
+      :timeout         => 2,
+      :connect_timeout => 2
+    }
 
-class Hatetepe::Client
-  attr_reader :app, :config
-  attr_reader :parser, :builder
-  attr_reader :requests, :pending_transmission, :pending_response
-  
-  def initialize(config)
-    @config = config
-    @parser,  @builder = Hatetepe::Parser.new, Hatetepe::Builder.new
-    
-    @requests = []
-    @pending_transmission, @pending_response = {}, {}
-    
-    @app = Rack::Builder.new.tap do |b|
-      b.use KeepAlive
-      b.use Pipeline
-      b.run method(:send_request)
-    end.to_app
-    
-    super
-  end
-  
-  def post_init
-    parser.on_response << method(:receive_response)
-    # XXX check if the connection is still present
-    builder.on_write << method(:send_data)
-    #builder.on_write {|data| p "client >> #{data}" }
-    
-    self.processing_enabled = true
-  end
-  
-  def receive_data(data)
-    #p "client << #{data}"
-    parser << data
-  rescue => e
-    close_connection
-    raise e
-  end
-  
-  def send_request(request)
-    id = request.object_id
-    
-    request.headers.delete "X-Hatetepe-Single"
-    builder.request request.to_a
-    pending_transmission[id].succeed
-    
-    pending_response[id] = EM::DefaultDeferrable.new
-    EM::Synchrony.sync pending_response[id]
-  ensure
-    pending_response.delete id
-  end
-  
-  def receive_response(response)
-    requests.find {|req| !req.response }.tap do |req|
-      req.response = response
-      pending_response[req.object_id].succeed response
+    attr_reader :config
+
+    # @api semipublic
+    def initialize(config)
+      @config = CONFIG_DEFAULTS.merge(config)
     end
-  end
-  
-  def <<(request)
-    request.headers["Host"] ||= "#{config[:host]}:#{config[:port]}"
 
-    request.connection = self
-    unless processing_enabled?
-      request.fail
-      return
+    # @api semipublic
+    def post_init
+      @builder, @parser   =  Builder.new, Parser.new
+      @builder.on_write   << method(:send_data)
+      # @builder.on_write {|data| p "--> #{data}" }
+      @parser.on_response << method(:receive_response)
+
+      @queue = []
+
+      @app = method(:send_request)
     end
-    
-    requests << request
-    
-    Fiber.new do
-      begin
-        pending_transmission[request.object_id] = EM::DefaultDeferrable.new
-        
-        app.call(request).tap do |response|
-          request.response = response
-          # XXX check for response.nil?
-          status = (response && response.success?) ? :succeed : :fail
-          requests.delete(request).send status, response
-        end
-      ensure
-        pending_transmission.delete request.object_id
-      end
-    end.resume
-  end
-  
-  def request(verb, uri, headers = {}, body = nil, http_version = "1.1")
-    headers["User-Agent"] ||= "hatetepe/#{Hatetepe::VERSION}"
-    
-    body = wrap_body(body)
-    headers, body = encode_body(headers.dup, body)
-    
-    request = Hatetepe::Request.new(verb, uri, headers, body, http_version)
-    self << request
 
-    # XXX shouldn't this happen in ::request ?
-    self.processing_enabled = false
-    
-    EM::Synchrony.sync request
-    
-    request.response.body.close_write if request.verb == "HEAD"
-    
-    request.response
-  end
-  
-  def stop
-    wait
-    close_connection
-  end
-
-  def wait
-    return if requests.empty?
-    EM::Synchrony.sync requests.last
-    
-    response = requests.last.response
-    if response && response.body
-      EM::Synchrony.sync response.body
+    # @api semipublic
+    def receive_data(data)
+      # p "<-- #{data}"
+      @parser << data
     end
-  end
-  
-  def unbind
-    super
-    
-    EM.next_tick do
-      requests.each do |req|
-        # fail state triggers
-        req.object_id.tap do |id|
-          pending_transmission[id].fail if pending_transmission[id]
-          pending_response[id].fail if pending_response[id]
+
+    # @api semipublic
+    def unbind
+      super
+      @queue.each {|job| job.fiber.resume(:kill) }
+    end
+
+    # @api public
+    def <<(request)
+      Fiber.new do
+        response = @app.call(request)
+
+        if response.nil? || response.failure?
+          request.fail(response)
+        else
+          request.succeed(response)
         end
-        # fail reponse body if the response has already been started
-        if req.response
-          req.response.body.tap {|b| b.close_write unless b.closed_write? }
-        end
-        # XXX FiberError: dead fiber called because req already succeeded
-        #     or failed, see github.com/eventmachine/eventmachine/issues/287
-        req.fail req.response
+      end.resume
+    end
+
+    # @return [Hatetepe::Response, nil]
+    #
+    # @api public
+    def request(verb, uri, headers = {}, body = [])
+      request =  Request.new(verb, uri, headers, body)
+      self    << request
+      EM::Synchrony.sync(request)
+    end
+
+    # @api public
+    def stop
+      wait
+      stop!
+    end
+
+    # @api public
+    def stop!
+      close_connection
+    end
+
+    # @api public
+    def wait
+      if job = @queue.last
+        EM::Synchrony.sync(job.request)
+        EM::Synchrony.sync(job.response.body) if job.response
       end
     end
-  end
-  
-  def wrap_body(body)
-    if body.respond_to? :each
-      body
-    elsif body.respond_to? :read
-      [body.read]
-    elsif body
-      [body]
-    else
-      []
-    end
-  end
-  
-  def encode_body(headers, body)
-    multipart, urlencoded = false, false
-    if Hash === body
-      query = lambda do |value|
-        case value
-        when Array
-          value.each &query
-        when Hash
-          value.values.each &query
-        when Rack::Multipart::UploadedFile
-          multipart = true
-        end
-      end
-      body.values.each &query
-      urlencoded = !multipart
-    end
-    
-    body = if multipart
-      boundary = Rack::Multipart::MULTIPART_BOUNDARY
-      headers["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
-      [Rack::Multipart.build_multipart(body)]
-    elsif urlencoded
-      headers["Content-Type"] = "application/x-www-form-urlencoded"
-      [Rack::Utils.build_nested_query(body)]
-    else
-      body
-    end
-    
-    [headers, body]
-  end
-  
-  class << self
-    def start(config)
-      EM.connect config[:host], config[:port], self, config
-    end
-    
-    def request(verb, uri, headers = {}, body = nil)
-      uri = URI(uri) unless uri.kind_of?(URI)
-      client = start(:host => uri.host, :port => uri.port)
-      
-      headers["X-Hatetepe-Single"] = true
-      response = client.request(verb, uri.request_uri, headers, body)
 
-      response.body.callback { client.stop }
-      response
+    # @api public
+    def self.start(config)
+      EM.connect(config[:host], config[:port], self, config)
     end
-  end
-  
-  [self, self.singleton_class].each do |cls|
-    [:get, :head, :post, :put, :delete,
-     :options, :trace, :connect].each do |verb|
-      cls.send(:define_method, verb) {|uri, *args| request verb, uri, *args }
+
+    # @api public
+    def self.request(verb, uri, headers = {}, body = [])
+    end
+
+    # @return [Hatetepe::Response, nil]
+    #
+    # @api private
+    def send_request(request)
+      previous =  @queue.last
+      current  =  Job.new(Fiber.current, request, false)
+      @queue   << current
+
+      # wait for the previous request to be sent
+      while previous && !previous.sent
+        return if Fiber.yield == :kill
+      end
+
+      # send the request
+      @builder.request(request.to_a)
+      current.sent = true
+
+      # wait for the response
+      while !current.response
+        return if Fiber.yield == :kill
+      end
+
+      # clean up and return response
+      @queue.delete(current)
+      current.response
+    end
+
+    # @api private
+    def receive_response(response)
+      job = @queue.find {|j| j.response.nil? }
+      unless job
+        raise "Received response without expecting one: #{response.status}"
+      end
+
+      job.response = response
+      job.fiber.resume
     end
   end
 end
