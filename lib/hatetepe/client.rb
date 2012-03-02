@@ -20,7 +20,7 @@ module Hatetepe
       :connect_timeout => 2
     }
 
-    attr_reader :config
+    attr_reader :config, :app
 
     # @api semipublic
     def initialize(config)
@@ -56,7 +56,7 @@ module Hatetepe
       Fiber.new do
         response = @app.call(request)
 
-        if response.nil? || response.failure?
+        if !response || response.failure?
           request.fail(response)
         else
           request.succeed(response)
