@@ -166,10 +166,10 @@ module Hatetepe
   def receive(&block)
     # maybe we can reuse the current fiber for this
     @receivers << Fiber.new do |data|
-      begin
+      while data
         block.call data
         data = Fiber.yield
-      end while data
+      end
     end
   end
 
