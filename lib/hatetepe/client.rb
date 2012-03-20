@@ -231,13 +231,14 @@ module Hatetepe
     #
     # @api private
     def receive_response(response)
-      job = @queue.find {|j| j.response.nil? }
-      unless job
-        raise "Received response without expecting one: #{response.status}"
-      end
+      query = proc {|j| j.response.nil? }
 
-      job.response = response
-      job.fiber.resume
+      if job = @queue.find(&query)
+        job.response = response
+        job.fiber.resume
+      else
+        raise "Received response but didn't expect one: #{response.status}"
+      end
     end
   end
 end
