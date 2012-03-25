@@ -1,7 +1,7 @@
 require "eventmachine"
 
 module Hatetepe
-  class Connection < EM::Connection
+  module Connection
     attr_accessor :processing_enabled
     alias_method :processing_enabled?, :processing_enabled
     
