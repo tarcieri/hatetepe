@@ -23,7 +23,8 @@ describe Hatetepe::Client, "(public API)" do
     end
 
     let :subject do
-      client = Hatetepe::Client.allocate
+      client = Object.new.extend(Hatetepe::Client)
+      client.stub(:send_data)
       client.send(:initialize, config)
       client.post_init
       client
