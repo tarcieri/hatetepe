@@ -87,6 +87,23 @@ describe Hatetepe::Server, "(public API)" do
       subject.receive_data(http_request)
       sent.should == http_response
     end
+
+    it "returns asynchronously" do
+      app.should_receive :call do |env|
+        EM::Synchrony.add_timer 0.5 do
+          response = [ 403, { "Content-Type" => "text/plain" }, [ "Mmh, nöö." ] ]
+          env["async.callback"].call(response)
+        end
+        [ -1, {}, [] ]
+      end
+
+      sent = ""
+      subject.stub(:send_data) {|data| sent << data }
+
+      subject.receive_data(http_request)
+      EM::Synchrony.sleep(0.55)
+      sent.should == http_response
+    end
   end
 end
 

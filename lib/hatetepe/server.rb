@@ -5,12 +5,17 @@ require "rack"
 require "hatetepe/builder"
 require "hatetepe/connection"
 require "hatetepe/parser"
+require "hatetepe/server/keep_alive"
+require "hatetepe/server/pipeline"
+require "hatetepe/server/rack_app"
 require "hatetepe/version"
 
 module Hatetepe::Server
   include Hatetepe::Connection
 
-  attr_reader :config
+  attr_reader :config, :requests
+
+  CONFIG_DEFAULTS = { :timeout => 1 }
 
   # @api public
   def self.start(config, &app)
@@ -19,7 +24,7 @@ module Hatetepe::Server
 
   # @api semipublic
   def initialize(config)
-    @config = config
+    @config = CONFIG_DEFAULTS.merge(config)
   end
 
   # @api semipublic
@@ -28,6 +33,14 @@ module Hatetepe::Server
     @parser.on_request &method(:process_request)
     @builder.on_write  &method(:send_data)
     # @builder.on_write {|data| p "<--| #{data}" }
+
+    @app = Rack::Builder.new.tap do |b|
+      b.use Pipeline,  self
+      b.use KeepAlive, self
+      b.run RackApp.new(config[:app], self)
+    end.to_app
+
+    @requests = []
   end
 
   # @api semipubic
@@ -39,32 +52,28 @@ module Hatetepe::Server
   # @api private
   def process_request(request)
     Fiber.new do
-      env      = build_env(request)
-      response = config[:app].call(env)
-      send_response(response)
+      requests << request
+      @app.call(request) do |response|
+        send_response(request, response)
+      end
     end.resume
   end
 
-  def build_env(request)
-    request.to_h.merge({
-      "SERVER_NAME"         => config[:host],
-      "SERVER_PORT"         => config[:port].to_s,
-      "rack.errors"         => $stderr,
-      "rack.multithread"    => false,
-      "rack.multiprocess"   => false,
-      "rack.run_once"       => false,
-      "rack.url_scheme"     => "http",
-      "hatetepe.connection" => self
-    })
-  end
-
   # @api private
-  def send_response(response)
+  def send_response(request, response)
     @builder.response(response.to_a)
+    requests.delete(request)
+
+    if response.failure?
+      request.fail(response)
+    else
+      request.succeed(response)
+    end
   end
 
   # @api semipublic
   def unbind(reason)
+    super
   end
 
   # @api public

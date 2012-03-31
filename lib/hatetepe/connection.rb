@@ -35,7 +35,7 @@ module Hatetepe
     end
     
     # TODO how to detect closed-by-timeout?
-    def unbind
+    def unbind(reason)
       @closed_by = :remote unless closed?
     end
   end

@@ -79,7 +79,7 @@ module Hatetepe::Client
   # @see EM::Connection#unbind
   #
   # @api semipublic
-  def unbind
+  def unbind(reason)
     super
     @queue.each {|job| job.fiber.resume(:kill) }
   end
