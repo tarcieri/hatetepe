@@ -1,5 +1,3 @@
-require "eventmachine"
-
 module Hatetepe
   module Connection
     attr_accessor :processing_enabled
@@ -18,7 +16,7 @@ module Hatetepe
     end
     
     def closed?
-      !!@closed_by
+      defined?(@closed_by)
     end
     
     def closed_by_remote?
@@ -26,17 +24,26 @@ module Hatetepe
     end
     
     def closed_by_self?
-      closed? && !closed_by_remote?
+      @closed_by == :self
+    end
+
+    def closed_by_timeout?
+      @closed_by == :timeout
     end
     
     def close_connection(after_writing = false)
-      @closed_by = :self
-      super after_writing
+      @closed_by = :self unless closed?
+      super
     end
     
-    # TODO how to detect closed-by-timeout?
     def unbind(reason)
-      @closed_by = :remote unless closed?
+      unless closed?
+        @closed_by = if reason == Errno::ETIMEDOUT
+          :timeout
+        else
+          :remote
+        end
+      end
     end
   end
 end

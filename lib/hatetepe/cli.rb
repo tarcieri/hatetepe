@@ -26,6 +26,7 @@ module Hatetepe
       :banner => "Time out connections after the specified admount of seconds (default: 1)"
     def start
       require "hatetepe/server"
+      require "rack/builder"
       
       ENV["RACK_ENV"] = expand_env(options[:env]) || ENV["RACK_ENV"] || "development"
       $stderr << "We're in #{ENV["RACK_ENV"]}\n"
@@ -47,12 +48,12 @@ module Hatetepe
         
         $stderr << "Binding to #{host}:#{port}\n"
         $stderr.flush
+
         Server.start({
           :app => app,
-          :errors => $stderr,
           :host => host,
           :port => port,
-          :timeout => (options[:timeout] || 1)
+          :timeout => (options[:timeout] || 5)
         })
       end
     end

@@ -5,20 +5,33 @@ module Hatetepe::Server
     end
 
     def call(request, &respond)
-      @respond = respond
+      @request, @respond = request, respond
 
       response = [ -1, {}, [] ]
       catch :async do
-        response = @app.call(env_for(request))
+        env                   = env_for(request)
+        env["async.callback"] = method(:async_callback)
+        env["rack.proxy"]     = method(:rack_proxy)
+        response              = @app.call(env)
       end
 
       respond(response)
+    ensure
+      @request, @response = nil, nil
     end
 
     def respond(response)
       if response[0] >= 0
         @respond.call(Hatetepe::Response.new(*response))
       end
+    end
+
+    def async_callback(response)
+      respond(response)
+    end
+
+    def rack_proxy(uri)
+      Hatetepe::Proxy.new(uri).call(@request, &response)
     end
 
     def env_for(request)

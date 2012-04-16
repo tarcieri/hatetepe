@@ -1,6 +1,5 @@
 require "eventmachine"
 require "em-synchrony"
-require "rack"
 
 require "hatetepe/builder"
 require "hatetepe/connection"
@@ -15,10 +14,10 @@ module Hatetepe::Server
 
   attr_reader :config, :requests
 
-  CONFIG_DEFAULTS = { :timeout => 1 }
+  CONFIG_DEFAULTS = { :timeout => 5.0 }
 
   # @api public
-  def self.start(config, &app)
+  def self.start(config)
     EM.start_server(config[:host], config[:port], self, config)
   end
 
@@ -34,25 +33,27 @@ module Hatetepe::Server
     @builder.on_write  &method(:send_data)
     # @builder.on_write {|data| p "<--| #{data}" }
 
-    @app = Rack::Builder.new.tap do |b|
-      b.use Pipeline,  self
-      b.use KeepAlive, self
-      b.run RackApp.new(config[:app], self)
-    end.to_app
+    @app = [
+      Pipeline,
+      KeepAlive,
+      RackApp
+    ].reverse.inject(config[:app]) {|inner, outer| outer.new(inner, self) }
 
-    @requests = []
+    self.comm_inactivity_timeout = config[:timeout]
   end
 
   # @api semipubic
   def receive_data(data)
     # p "-->| #{data}"
     @parser << data
+  rescue Object => ex
+    p ex
+    close_connection
   end
 
   # @api private
   def process_request(request)
     Fiber.new do
-      requests << request
       @app.call(request) do |response|
         send_response(request, response)
       end
@@ -61,8 +62,9 @@ module Hatetepe::Server
 
   # @api private
   def send_response(request, response)
+    self.comm_inactivity_timeout = 0
     @builder.response(response.to_a)
-    requests.delete(request)
+    self.comm_inactivity_timeout = config[:timeout]
 
     if response.failure?
       request.fail(response)
@@ -82,5 +84,6 @@ module Hatetepe::Server
 
   # @api public
   def stop!
+    close_connection_after_writing
   end
 end

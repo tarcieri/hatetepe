@@ -2,17 +2,15 @@ require "spec_helper"
 require "hatetepe/connection"
 
 describe Hatetepe::Connection do
-  let(:conn) { Hatetepe::Connection.allocate }
+  let :conn do
+    Object.new.extend Hatetepe::Connection
+  end
   
   let(:peername) { "\x02\x00\x86\xF6\x7F\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00" }
   let(:address) { "127.0.0.1" }
   let(:port) { 34550 }
   
   before { conn.stub :get_peername => peername }
-  
-  it "inherits from EM::Connection" do
-    conn.should be_an(EM::Connection)
-  end
   
   describe "#remote_address" do
     it "returns the remote peer's address" do
@@ -49,14 +47,14 @@ describe Hatetepe::Connection do
   
   describe "#unbind" do
     it "sets the closed-by-remote flag" do
-      conn.unbind
+      conn.unbind(nil)
       conn.should be_closed
       conn.should be_closed_by_remote
     end
     
     it "doesn't overwrite an existing closed-by flag" do
       conn.stub :closed? => true
-      conn.unbind
+      conn.unbind(nil)
       conn.should be_closed
       conn.should_not be_closed_by_remote
     end

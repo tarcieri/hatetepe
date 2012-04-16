@@ -19,8 +19,8 @@ module Hatetepe::Client
   #
   # @api public
   CONFIG_DEFAULTS = {
-    :timeout         => 2,
-    :connect_timeout => 2
+    :timeout         => 5,
+    :connect_timeout => 5
   }
 
   # The configuration for this Client instance.
@@ -59,6 +59,8 @@ module Hatetepe::Client
     @queue = []
 
     @app = method(:send_request)
+
+    self.comm_inactivity_timeout = config[:timeout]
   end
 
   # Feeds response data into the parser.
@@ -204,8 +206,10 @@ module Hatetepe::Client
     end
 
     # send the request
+    self.comm_inactivity_timeout = 0
     @builder.request(request.to_a)
     current.sent = true
+    self.comm_inactivity_timeout = config[:timeout]
 
     # wait for the response
     while !current.response
