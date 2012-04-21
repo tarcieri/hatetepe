@@ -31,6 +31,7 @@ describe Hatetepe::Server, "(public API)" do
           },
           :send_data => nil
         })
+        s.stub(:comm_inactivity_timeout=)
         s.post_init
       end
     end

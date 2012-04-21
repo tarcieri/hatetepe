@@ -14,9 +14,17 @@ module Hatetepe
     def sockaddr
       @sockaddr ||= Socket.unpack_sockaddr_in(get_peername) rescue nil
     end
+
+    def connection_completed
+      @connected = true
+    end
+
+    def connected?
+      defined?(@connected) && @connected
+    end
     
     def closed?
-      defined?(@closed_by)
+      !!defined?(@closed_by)
     end
     
     def closed_by_remote?
@@ -28,7 +36,11 @@ module Hatetepe
     end
 
     def closed_by_timeout?
-      @closed_by == :timeout
+      connected? && @closed_by == :timeout
+    end
+
+    def closed_by_connect_timeout?
+      !connected? && @closed_by == :timeout
     end
     
     def close_connection(after_writing = false)

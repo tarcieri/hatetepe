@@ -25,6 +25,8 @@ describe Hatetepe::Client, "(public API)" do
     let :subject do
       client = Object.new.extend(Hatetepe::Client)
       client.stub(:send_data)
+      client.stub(:comm_inactivity_timeout=)
+      client.stub(:pending_connect_timeout=)
       client.send(:initialize, config)
       client.post_init
       client

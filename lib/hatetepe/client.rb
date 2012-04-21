@@ -61,6 +61,7 @@ module Hatetepe::Client
     @app = method(:send_request)
 
     self.comm_inactivity_timeout = config[:timeout]
+    self.pending_connect_timeout = config[:connect_timeout]
   end
 
   # Feeds response data into the parser.
