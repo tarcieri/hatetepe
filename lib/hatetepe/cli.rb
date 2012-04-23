@@ -26,7 +26,7 @@ module Hatetepe
       :banner => "Time out connections after the specified admount of seconds (default: see Hatetepe::Server::CONFIG_DEFAULTS)"
     def start
       require "hatetepe/server"
-      require "rack/builder"
+      require "rack"
       
       ENV["RACK_ENV"] = options[:env] || ENV["RACK_ENV"] || "development"
       $stderr << "We're in #{ENV["RACK_ENV"]}\n"

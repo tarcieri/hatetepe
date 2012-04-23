@@ -1,7 +1,5 @@
 require "em-synchrony"
 require "eventmachine"
-require "rack"
-require "uri"
 
 require "hatetepe/builder"
 require "hatetepe/connection"
