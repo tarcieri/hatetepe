@@ -23,11 +23,12 @@ module Hatetepe
     method_option :env, :aliases => "-e", :type => :string,
       :banner => "Boot the app in the specified environment (default: development)"
     method_option :timeout, :aliases => "-t", :type => :numeric,
-      :banner => "Time out connections after the specified admount of seconds (default: 1)"
+      :banner => "Time out connections after the specified admount of seconds (default: see Hatetepe::Server::CONFIG_DEFAULTS)"
     def start
       require "hatetepe/server"
+      require "rack"
       
-      ENV["RACK_ENV"] = expand_env(options[:env]) || ENV["RACK_ENV"] || "development"
+      ENV["RACK_ENV"] = options[:env] || ENV["RACK_ENV"] || "development"
       $stderr << "We're in #{ENV["RACK_ENV"]}\n"
       $stderr.flush
       
@@ -42,29 +43,19 @@ module Hatetepe
         trap("INT") { EM.stop }
         trap("TERM") { EM.stop }
         
-        host = options[:bind] || "127.0.0.1"
-        port = options[:port] || 3000
+        host    = options[:bind]    || "127.0.0.1"
+        port    = options[:port]    || 3000
+        timeout = options[:timeout] || Hatetepe::Server::CONFIG_DEFAULTS[:timeout]
         
         $stderr << "Binding to #{host}:#{port}\n"
         $stderr.flush
+
         Server.start({
-          :app => app,
-          :errors => $stderr,
-          :host => host,
-          :port => port,
-          :timeout => (options[:timeout] || 1)
+          app:     app,
+          host:    host,
+          port:    port,
+          timeout: timeout
         })
-      end
-    end
-    
-    protected
-    
-    def expand_env(env)
-      env &&= env.dup.downcase
-      case env
-        when /^dev(el(op)?)?$/ then "development"
-        when /^test(ing)?$/ then "testing"
-        else env
       end
     end
   end

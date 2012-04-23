@@ -14,14 +14,12 @@ Gem::Specification.new do |s|
   #s.description = %q{TODO: write description}
 
   s.add_dependency "http_parser.rb", "~> 0.5.3"
-  s.add_dependency "eventmachine"
-  s.add_dependency "em-synchrony", "~> 1.0"
+  s.add_dependency "eventmachine",   "~> 1.0.0.beta.4"
+  s.add_dependency "em-synchrony",   "~> 1.0"
   s.add_dependency "rack"
-  s.add_dependency "async-rack"
   s.add_dependency "thor"
   
   s.add_development_dependency "rspec"
-  s.add_development_dependency "fakefs"
   s.add_development_dependency "yard"
   s.add_development_dependency "rdiscount"
 

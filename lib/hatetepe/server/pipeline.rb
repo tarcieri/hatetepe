@@ -1,24 +1,20 @@
-require "em-synchrony"
-
-class Hatetepe::Server
-  # TODO move specs from server_spec.rb to server/pipeline_spec.rb
+module Hatetepe::Server
   class Pipeline
-    attr_reader :app
-    
-    def initialize(app)
-      @app = app
+    def initialize(app, connection)
+      @requests, @app = [], app
     end
-    
-    def call(env)
-      previous = env["hatetepe.connection"].requests[-2]
-      
-      stream_start = env["stream.start"]
-      env["stream.start"] = proc do |response|
-        EM::Synchrony.sync previous if previous
-        stream_start.call response
+
+    def call(request, &respond)
+      begin
+        previous  =  @requests.last
+        @requests << request
+        @app.call(request) do |response|
+          EM::Synchrony.sync(previous) if previous
+          respond.call(response)
+        end
+      ensure
+        @requests.delete(request)
       end
-      
-      app.call env
     end
   end
 end

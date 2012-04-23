@@ -1,7 +1,5 @@
-require "eventmachine"
-
 module Hatetepe
-  class Connection < EM::Connection
+  module Connection
     attr_accessor :processing_enabled
     alias_method :processing_enabled?, :processing_enabled
     
@@ -16,9 +14,17 @@ module Hatetepe
     def sockaddr
       @sockaddr ||= Socket.unpack_sockaddr_in(get_peername) rescue nil
     end
+
+    def connection_completed
+      @connected = true
+    end
+
+    def connected?
+      defined?(@connected) && @connected
+    end
     
     def closed?
-      !!@closed_by
+      !!defined?(@closed_by)
     end
     
     def closed_by_remote?
@@ -26,17 +32,30 @@ module Hatetepe
     end
     
     def closed_by_self?
-      closed? && !closed_by_remote?
+      @closed_by == :self
+    end
+
+    def closed_by_timeout?
+      connected? && @closed_by == :timeout
+    end
+
+    def closed_by_connect_timeout?
+      !connected? && @closed_by == :timeout
     end
     
     def close_connection(after_writing = false)
-      @closed_by = :self
-      super after_writing
+      @closed_by = :self unless closed?
+      super
     end
     
-    # TODO how to detect closed-by-timeout?
-    def unbind
-      @closed_by = :remote unless closed?
+    def unbind(reason)
+      unless closed?
+        @closed_by = if reason == Errno::ETIMEDOUT
+          :timeout
+        else
+          :remote
+        end
+      end
     end
   end
 end

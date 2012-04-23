@@ -1,5 +1,7 @@
 require "eventmachine"
+require "em-synchrony"
 require "hatetepe/server"
+require "rack"
 
 module Rack
   module Handler

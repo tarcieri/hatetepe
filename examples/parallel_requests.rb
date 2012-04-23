@@ -1,4 +1,5 @@
 require "hatetepe"
+require "awesome_print"
 
 EM.synchrony do
   # one server
@@ -16,10 +17,10 @@ EM.synchrony do
     req = Hatetepe::Request.new(:get, "/", {}, [])
 
     # response status between 100 and 399
-    req.callback {|res| puts "request finished with #{res.status} response" }
+    req.callback {|res| puts "request ##{i} finished with #{res.status} response" }
 
     # response status between 400 and 599 or connection failure
-    req.errback {|res| puts "request finished with #{res ? res.status : 'no'} response" }
+    req.errback {|res| puts "request ##{i} finished with #{res ? res.status : 'no'} response" }
 
     clients[i % clients.length] << req
     req

@@ -1,120 +1,112 @@
 require "spec_helper"
 require "hatetepe/cli"
+require "hatetepe/server"
+require "hatetepe/version"
+require "rack/builder"
 
-describe "The `hatetepe start' command" do
+describe Hatetepe::CLI do
+  let :rackup do
+    [ proc {|*| }, {} ]
+  end
+
   before do
-    ENV.delete "RACK_ENV"
-    
-    $stderr = StringIO.new
-    
-    FakeFS.activate!
-    File.open "config.ru", "w" do |f|
-      f.write 'run proc {|env| [200, {}, ["Hello world!"]] }'
-    end
-    File.open "config2.ru", "w" do |f|
-      f.write 'run proc {|env| [501, {}, ["Herp derp"]] }'
-    end
+    file = File.expand_path("config.ru")
+    Rack::Builder.stub(:parse_file).with(file) { rackup }
+
+    $stdout, $stderr = StringIO.new, StringIO.new
+    @old_env         = ENV.delete("RACK_ENV")
   end
   
   after do
-    $stderr = STDERR
-    
-    FakeFS.deactivate!
-    FakeFS::FileSystem.clear
+    $stdout, $stderr = STDOUT, STDERR
+    ENV["RACK_ENV"]  = @old_env
   end
-  
-  describe "without options" do
-    it "starts a Hatetepe::Server with default options" do
-      command "" do
-        Socket.tcp("127.0.0.1", 3000) {|*| }
+
+  describe "#version" do
+    it "prints Hatetepe's version" do
+      Hatetepe::CLI.start([ "version" ])
+      $stdout.rewind
+      $stdout.read.should include(Hatetepe::VERSION)
+    end
+  end
+
+  describe "#start" do
+    it "starts a server running the default configuration" do
+      Hatetepe::Server.should_receive(:start) do |config|
+        config[:host].should    == "127.0.0.1"
+        config[:port].should    equal(3000)
+        config[:timeout].should == 5
+        
+        config[:app].should    equal(rackup[0])
         ENV["RACK_ENV"].should == "development"
-        $stderr.string.should include("config.ru", "127.0.0.1:3000", "development")
       end
+      Hatetepe::CLI.start([])
     end
-    
-    it "serves HTTP requests" do
-      command "" do
-        Hatetepe::Client.get("http://127.0.0.1:3000").tap do |response|
-          response.status.should equal(200)
-          response.body.read.should == "Hello world!"
-        end
-      end
-    end
-  end
-  
-  ["--port", "-p"].each do |opt|
-    describe "with #{opt} option" do
-      it "binds the Hatetepe::Server to the specified TCP port" do
-        command "#{opt} 3002" do
-          Socket.tcp("127.0.0.1", 3002) {|*| }
-        end
-      end
-    end
-  end
-  
-  ["--bind", "-b"].each do |opt|
-    describe "with #{opt} option" do
-      it "binds the Hatetepe::Server to the specified TCP interface" do
-        command "#{opt} 127.0.0.2" do
-          Socket.tcp("127.0.0.2", 3000) {|*| }
-        end
-      end
-    end
-  end
-  
-  ["--rackup", "-r"].each do |opt|
-    describe "with #{opt} option" do
-      it "loads the specified rackup (.ru) file" do
-        command "#{opt} config2.ru" do
-          Hatetepe::Client.get("http://127.0.0.1:3000").tap do |response|
-            response.status.should equal(501)
-            response.body.read.should == "Herp derp"
-          end
-        end
-      end
-    end
-  end
-  
-  ["--env", "-e"].each do |opt|
-    describe "with #{opt} option" do
-      it "boots the app in the specified environment" do
-        command "#{opt} herpderp" do
-          ENV["RACK_ENV"].should == "herpderp"
-        end
-      end
-      
-      ["dev", "devel", "develop"].each do |value|
-        it "expands #{value} to `development'" do
-          command "#{opt} #{value}" do
-            ENV["RACK_ENV"].should == "development"
-          end
-        end
-      end
-      
-      it "expands test to `testing'" do
-        command "#{opt} test" do
-          ENV["RACK_ENV"].should == "testing"
-        end
-      end
-    end
-  end
-  
-  ["--timeout", "-t"].each do |opt|
-    describe "with #{opt} option" do
-      let :client do
-        Hatetepe::Client.start :host => "127.0.0.1", :port => 3000
-      end
-      
-      it "times out a connection after the specified amount of seconds" do
-        command "#{opt} 0.5", 1 do
-          client.should_not be_closed
 
-          EM::Synchrony.sleep 0.45
-          client.should_not be_closed
+    it "writes stuff to stderr" do
+      Hatetepe::CLI.start([])
+      $stderr.rewind
+      $stderr.read.should include("config.ru", "127.0.0.1:3000", "development")
+    end
 
-          EM::Synchrony.sleep 0.1
-          client.should be_closed_by_remote
+    it "starts an EventMachine reactor" do
+      EM.should_receive(:synchrony)
+      Hatetepe::CLI.start([])
+    end
+
+    it "enables epoll" do
+      EM.should_receive(:epoll)
+      Hatetepe::CLI.start([])
+    end
+
+    it "doesn't overwrite RACK_ENV" do
+      ENV["RACK_ENV"] = "foobar"
+      Hatetepe::CLI.start([])
+      ENV["RACK_ENV"].should == "foobar"
+    end
+
+    describe "with --bind option" do
+      it "passes the :host option to Server.start" do
+        Hatetepe::Server.should_receive(:start) do |config|
+          config[:host].should == "127.0.5.1"
         end
+        Hatetepe::CLI.start([ "--bind", "127.0.5.1" ])
+      end
+    end
+
+    describe "with --port option" do
+      it "passes the :port option to Server.start" do
+        Hatetepe::Server.should_receive(:start) do |config|
+          config[:port].should == 5234
+        end
+        Hatetepe::CLI.start([ "--port", "5234" ])
+      end
+    end
+
+    describe "with --timeout option" do
+      it "passes the :timeout option to Server.start" do
+        Hatetepe::Server.should_receive(:start) do |config|
+          config[:timeout].should == 123.4
+        end
+        Hatetepe::CLI.start([ "--timeout", "123.4" ])
+      end
+    end
+
+    describe "with --rackup option" do
+      it "boots from the specified RackUp file" do
+        file = File.expand_path("./other_config.ru")
+        Rack::Builder.should_receive(:parse_file).with(file) { rackup }
+        Hatetepe::Server.should_receive(:start) do |config|
+          config[:app].should equal(rackup[0])
+        end
+        Hatetepe::CLI.start([ "--rackup", "other_config.ru" ])
+      end
+    end
+
+    describe "with --env option" do
+      it "sets RACK_ENV to the specified value" do
+        Hatetepe::CLI.start([ "--env", "production" ])
+        ENV["RACK_ENV"].should == "production"
       end
     end
   end
