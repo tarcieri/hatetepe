@@ -100,7 +100,7 @@ module Hatetepe::Client
     Fiber.new do
       response = @app.call(request)
 
-      if request.verb == "HEAD"
+      if response && request.verb == "HEAD"
         response.body.close_write
       end
 
