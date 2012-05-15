@@ -56,7 +56,7 @@ module Hatetepe::Client
 
     @queue = []
 
-    @app = method(:send_request)
+    @app = proc {|request| send_request(request) }
 
     self.comm_inactivity_timeout = config[:timeout]
     self.pending_connect_timeout = config[:connect_timeout]
