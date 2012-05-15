@@ -88,11 +88,10 @@ describe Hatetepe::Body do
   end
   
   context "#rewind" do
-    let(:rewind) { stub "rewind" }
-    
-    it "forwards to io#rewind" do
-      body.io.stub :rewind => rewind
-      body.rewind.should equal(rewind)
+    it "blocks and forwards to io#rewind" do
+      body.should_receive(:sync).ordered
+      body.io.should_receive(:rewind).ordered
+      body.rewind
     end
   end
   

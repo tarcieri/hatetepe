@@ -71,6 +71,7 @@ module Hatetepe
     #
     # @return [undefined]
     def rewind
+      sync
       io.rewind
     end
     
