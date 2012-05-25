@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "hatetepe/server"
+require "rack/lint"
 
 describe Hatetepe::Server, "(public API)" do
   describe ".start(config, &app)" do

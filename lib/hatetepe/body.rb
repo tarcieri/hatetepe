@@ -72,6 +72,16 @@ module Hatetepe
     # @return [undefined]
     def rewind
       sync
+      rewind!
+    end
+
+    # Rewinds underlying IO without blocking
+    #
+    # TODO this is a hack. the whole blocking/rewinding stuff needs to be
+    #      more though out.
+    #
+    # @api protected
+    def rewind!
       io.rewind
     end
     

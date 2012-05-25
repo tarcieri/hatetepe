@@ -57,7 +57,7 @@ module Hatetepe
     end
     
     def complete
-      message.body.rewind
+      message.body.rewind!
       message.body.close_write unless message.body.closed_write?
       event! :complete
     end
