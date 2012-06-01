@@ -10,15 +10,16 @@ describe Hatetepe::Client do
   end
 
   let :client do
-    client = Object.new.extend(Hatetepe::Client)
-    client.stub(:send_data)
-    client.stub(:comm_inactivity_timeout=)
-    client.stub(:pending_connect_timeout=)
-    client.stub(:send_request) { response }
+    Object.new.tap do |client|
+      client.extend(Hatetepe::Client)
+      client.stub(:send_data)
+      client.stub(:comm_inactivity_timeout=)
+      client.stub(:pending_connect_timeout=)
+      client.stub(:send_request) { response }
 
-    client.send(:initialize, config)
-    client.post_init
-    client
+      client.send(:initialize, config)
+      client.post_init
+    end
   end
 
   describe ".start" do
@@ -70,9 +71,59 @@ describe Hatetepe::Client do
     end
   end
 
-  describe ".request"
+  describe ".request" do
+    let(:client)   { stub("client", request: res, stop: nil)  }
+    let(:headers)  { stub("headers") }
+    let(:body)     { stub("body") }
+    let(:res)      { stub("response") }
+    let(:response) { Hatetepe::Client.request(:put, "/test", headers, body) }
 
-  describe "#request"
+    before { Hatetepe::Client.stub(start: client) }
+
+    it "it returns the response" do
+      client.should_receive(:request).with(:put, URI("/test"), headers, body)
+      response.should equal(res)
+    end
+
+    it "stops the client afterwards" do
+      client.should_receive(:stop)
+      response
+    end
+  end
+
+  describe "#request" do
+    let(:body)     { [ "Hello,", " world!" ]            }
+    let(:headers)  { { "Content-Type" => "text/plain" } }
+    let(:request)  { stub("request")                    }
+    let(:response) { stub("response")                   }
+
+    before do
+      client.stub(:<<)
+      Hatetepe::Request.stub(:new => request)
+    end
+
+    it "sends the request" do
+      Hatetepe::Request.should_receive(:new) do |verb, uri, headers, body|
+        verb.should                           eq(:head)
+        uri.path.should                       eq("/test")
+        uri.query.should                      eq("key=value")
+        headers["Content-Type"].should        eq("text/plain")
+        Enumerator.new(body).to_a.join.should eq("Hello, world!")
+
+        request
+      end
+
+      client.should_receive(:<<).with(request)
+      EM::Synchrony.should_receive(:sync).with(request)
+
+      client.request(:head, "/test?key=value", headers, body)
+    end
+
+    it "returns the response" do
+      EM::Synchrony.stub(:sync => response)
+      client.request(:get, "/").should equal(response)
+    end
+  end
 
   describe "#<<" do
     let :request do

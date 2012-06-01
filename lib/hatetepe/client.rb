@@ -128,7 +128,7 @@ module Hatetepe::Client
   #
   # @api public
   def request(verb, uri, headers = {}, body = [])
-    request =  Hatetepe::Request.new(verb, uri, headers, body)
+    request =  Hatetepe::Request.new(verb, URI(uri), headers, body)
     self    << request
     EM::Synchrony.sync(request)
   end
@@ -182,6 +182,11 @@ module Hatetepe::Client
 
   # @api public
   def self.request(verb, uri, headers = {}, body = [])
+    uri    = URI(uri)
+    client = start(host: uri.host, port: uri.port)
+    client.request(verb, uri, headers, body)
+  ensure
+    client.stop
   end
 
   # Feeds the request into the builder and blocks while waiting for the
@@ -248,4 +253,17 @@ module Hatetepe::Client
       raise "Received response but didn't expect one: #{response.status}"
     end
   end
+
+  module VerbMethods
+    [
+      :get, :head, :options, :put, :post, :delete, :patch, :connect
+    ].each do |verb|
+      define_method(verb) do |uri, headers = {}, body = []|
+        request(verb, uri, headers, body)
+      end
+    end
+  end
+
+  include VerbMethods
+  extend VerbMethods
 end
