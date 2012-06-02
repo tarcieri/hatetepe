@@ -152,7 +152,7 @@ describe Hatetepe::Client do
       let(:response) { nil }
 
       it "fails the request" do
-        request.should_receive(:fail).with(nil)
+        request.should_receive(:fail).with(nil, client)
         client << request
       end
     end

@@ -104,7 +104,9 @@ module Hatetepe::Client
         response.body.close_write
       end
 
-      if !response || response.failure?
+      if !response
+        request.fail(nil, self)
+      elsif response.failure?
         request.fail(response)
       else
         request.succeed(response)
