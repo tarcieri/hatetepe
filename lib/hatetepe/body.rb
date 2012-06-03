@@ -2,8 +2,6 @@ require "em-synchrony"
 require "eventmachine"
 require "stringio"
 
-require "hatetepe/deferred_status_fix"
-
 module Hatetepe
   # Thin wrapper around StringIO for asynchronous body processing.
   class Body
