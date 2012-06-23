@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.summary     = %q{The HTTP toolkit}
   #s.description = %q{TODO: write description}
 
-  s.add_dependency "http_parser.rb", "~> 0.5.3"
+  s.add_dependency "ffi-http-parser"
   s.add_dependency "eventmachine",   "~> 1.0.0.beta.4"
   s.add_dependency "em-synchrony",   "~> 1.0"
   s.add_dependency "rack"

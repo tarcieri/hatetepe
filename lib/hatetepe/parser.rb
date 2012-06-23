@@ -1,4 +1,4 @@
-require "http/parser"
+require "ffi/http/parser"
 
 require "hatetepe/events"
 require "hatetepe/request"
@@ -19,7 +19,7 @@ module Hatetepe
     attr_reader :message
     
     def initialize(&block)
-      @parser = HTTP::Parser.new.tap do |p|
+      @parser = FFI::HTTP::Parser.new.tap do |p|
         p.on_headers_complete = proc do
           version = p.http_version.join(".")
           if p.http_method
