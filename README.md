@@ -1,4 +1,4 @@
-The HTTP Toolkit
+The HTTP Toolkit [![Build Status](https://secure.travis-ci.org/lgierth/hatetepe.png?branch=master)](http://travis-ci.org/lgierth/hatetepe) [![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/lgierth/hatetepe)
 ================
 
 Hatetepe is a framework for building HTTP servers, clients and proxies using the
@@ -13,8 +13,6 @@ automatic JSON or form-data encoding, have a look at
 [Faraday](https://github.com/technoweenie/faraday), there's also an
 [Hatetepe adapter](https://github.com/technoweenie/faraday/pull/108)
 for it being worked on.
-
-[![Build status](https://secure.travis-ci.org/lgierth/hatetepe.png?branch=master)](http://travis-ci.org/lgierth/hatetepe)
 
 
 Getting Started (Server)
