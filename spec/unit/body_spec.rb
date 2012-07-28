@@ -136,6 +136,22 @@ describe Hatetepe::Body do
       body.succeed
       succeeded.should be_true
     end
+
+    it "returns self" do
+      Fiber.new { body.each {}.should == body }.resume
+      body.succeed
+    end
+
+    describe "without a block" do
+      let(:enumerator) { stub }
+
+      before { body.stub(:to_enum).with(:each) { enumerator } }
+
+      it "immediately returns an Enumerator" do
+        Fiber.new { body.each.should == enumerator }.resume
+          body.succeed
+      end
+    end
   end
   
   context "#read(length, buffer)" do

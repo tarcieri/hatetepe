@@ -111,11 +111,15 @@ module Hatetepe
     #
     # @yield [String] Block to execute for each incoming data chunk.
     #
-    # @return [undefined]
+    # @return [Enumerator,self]
     def each(&block)
+      return to_enum(__method__) unless block
+
       @receivers << block
       block.call io.string.dup unless io.string.empty?
       sync
+
+      self
     end
     
     # Forwards to StringIO#read.
