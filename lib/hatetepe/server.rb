@@ -14,7 +14,10 @@ module Hatetepe::Server
 
   attr_reader :config, :requests
 
-  CONFIG_DEFAULTS = { :timeout => 5.0 }
+  CONFIG_DEFAULTS = {
+    :timeout => 5.0,
+    :app     => [ Pipeline, KeepAlive, RackApp ]
+  }
 
   # @api public
   def self.start(config)
@@ -33,11 +36,12 @@ module Hatetepe::Server
     @builder.on_write  &method(:send_data)
     # @builder.on_write {|data| p "<--| #{data}" }
 
-    @app = [
-      Pipeline,
-      KeepAlive,
-      RackApp
-    ].reverse.inject(config[:app]) {|inner, outer| outer.new(inner, self) }
+    if config[:app].respond_to?(:call)
+      config[:app] = [ *CONFIG_DEFAULTS[:app], config[:app] ]
+    end
+    @app = config[:app].inject(config[:app].pop) do |inner, outer|
+      outer.new(inner, self)
+    end
 
     self.comm_inactivity_timeout = config[:timeout]
   end
@@ -47,7 +51,7 @@ module Hatetepe::Server
     # p "-->| #{data}"
     @parser << data
   rescue Object => ex
-    p ex
+    puts [ex.message, *ex.backtrace].join("\n\t")
     close_connection
   end
 

@@ -28,17 +28,18 @@ describe Hatetepe::Server, "(public API)" do
           :config    => {
             :host => "127.0.5.1",
             :port => 3000,
-            :app  => stub("app")
+            :app  => app
           },
           :send_data => nil
         })
         s.stub(:comm_inactivity_timeout=)
+        s.stub(:close_connection)
         s.post_init
       end
     end
 
     let :app do
-      subject.config[:app]
+      stub("app", :call => nil)
     end
 
     let :http_request do
