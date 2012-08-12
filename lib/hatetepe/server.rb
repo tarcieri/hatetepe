@@ -26,7 +26,7 @@ module Hatetepe::Server
 
   # @api semipublic
   def initialize(config)
-    @config = CONFIG_DEFAULTS.merge(config)
+    @config = CONFIG_DEFAULTS.merge(config).freeze
   end
 
   # @api semipublic
@@ -36,10 +36,13 @@ module Hatetepe::Server
     @builder.on_write  &method(:send_data)
     # @builder.on_write {|data| p "<--| #{data}" }
 
-    if config[:app].respond_to?(:call)
-      config[:app] = [ *CONFIG_DEFAULTS[:app], config[:app] ]
-    end
-    @app = config[:app].inject(config[:app].pop) do |inner, outer|
+    app =
+      if config[:app].respond_to?(:call)
+        [ *CONFIG_DEFAULTS[:app], config[:app] ]
+      else
+        config[:app].dup
+      end
+    @app = app.inject(app.pop) do |inner, outer|
       outer.new(inner, self)
     end
 
