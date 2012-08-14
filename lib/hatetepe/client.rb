@@ -95,12 +95,15 @@ module Hatetepe::Client
   # The request will +#fail+ with a +nil+ response if the connection was
   # closed for whatever reason.
   #
+  # TODO find out if there are more cases where the response body
+  #      should automatically be closed.
+  #
   # @api public
   def <<(request)
     Fiber.new do
       response = @app.call(request)
 
-      if response && request.verb == "HEAD"
+      if response && (request.verb == "HEAD" || response.status == 204)
         response.body.close_write
       end
 
