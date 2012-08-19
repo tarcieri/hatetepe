@@ -6,10 +6,10 @@ describe Hatetepe::Connection do
     Object.new.extend Hatetepe::Connection
   end
   
-  let(:peername) { "\x02\x00\x86\xF6\x7F\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00" }
   let(:address) { "127.0.0.1" }
-  let(:port) { 34550 }
-  
+  let(:port) { 34450 }
+  let(:peername) { Socket.pack_sockaddr_in(port, address) }
+
   before { conn.stub :get_peername => peername }
   
   describe "#remote_address" do
