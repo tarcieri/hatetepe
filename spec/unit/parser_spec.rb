@@ -164,20 +164,11 @@ describe Hatetepe::Parser do
   context "#on_body {|body| ... }" do
     it "evals the block when the body starts" do
       block.should_receive(:call) {|body|
-        body.should equal(parser.message.body)
-        
-        # we'd have to #close_write to get body#length
-        body.io.length.should == 0
+        Fiber.new { body.read.should eq("Hello!") }.resume
       }
       
       parser.on_body &block
       do_request
-      
-      parser.message.body.tap {|b|
-        b.rewind
-        b.length.should == 6
-        b.read.should == "Hello!"
-      }
     end
     
     it "changes the state to :body" do
