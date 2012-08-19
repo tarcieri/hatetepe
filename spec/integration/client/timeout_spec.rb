@@ -16,6 +16,10 @@ describe Hatetepe::Client do
   end
 
   before do
+    if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+      pending "EventMachine timeouts are not available on JRuby"
+    end
+
     Hatetepe::Server.start(options.merge(timeout: 0))
   end
 

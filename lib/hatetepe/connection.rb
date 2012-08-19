@@ -2,7 +2,7 @@ module Hatetepe
   module Connection
     attr_accessor :processing_enabled
     alias_method :processing_enabled?, :processing_enabled
-    
+
     def remote_address
       sockaddr && sockaddr[1]
     end
@@ -55,6 +55,18 @@ module Hatetepe
         else
           :remote
         end
+      end
+    end
+
+    def comm_inactivity_timeout=(seconds)
+      unless defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+        super
+      end
+    end
+
+    def pending_connect_timeout=(seconds)
+      unless defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+        super
       end
     end
   end

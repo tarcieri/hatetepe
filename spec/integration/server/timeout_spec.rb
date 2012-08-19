@@ -3,6 +3,12 @@ require "hatetepe/client"
 require "hatetepe/server"
 
 describe Hatetepe::Server do
+  before do
+    if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
+      pending "EventMachine timeouts are not available on JRuby"
+    end
+  end
+
   let :options do
     { host: "127.0.0.1", port: 3123 }
   end
