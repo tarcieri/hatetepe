@@ -30,7 +30,8 @@ module Hatetepe
     def initialize_parser
       @parser = HTTP::Parser.new.tap do |p|
         p.on_headers_complete = proc do |headers|
-          headers_complete(p) unless message
+          headers_complete(p) if @headers_counter.even?
+          @headers_counter += 1
           nil
         end
         
@@ -43,6 +44,7 @@ module Hatetepe
       @parser.reset!
       event! :reset
       @message = nil
+      @headers_counter = 0
     end
     
     def <<(data)
@@ -75,7 +77,7 @@ module Hatetepe
       message.body.rewind!
       message.body.close_write unless message.body.closed_write?
       event! :complete
-      reset
+      @headers_counter += 1 if @headers_counter.odd?
     end
   end
 end
