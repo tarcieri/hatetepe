@@ -36,15 +36,7 @@ module Hatetepe::Server
     @builder.on_write  &method(:send_data)
     # @builder.on_write {|data| p "<--| #{data}" }
 
-    app =
-      if config[:app].respond_to?(:call)
-        [ *CONFIG_DEFAULTS[:app], config[:app] ]
-      else
-        config[:app].dup
-      end
-    @app = app.inject(app.pop) do |inner, outer|
-      outer.new(inner, self)
-    end
+    @app = build_app(config[:app])
 
     self.comm_inactivity_timeout = config[:timeout]
   end
@@ -92,5 +84,19 @@ module Hatetepe::Server
   # @api public
   def stop!
     close_connection_after_writing
+  end
+
+  private
+
+  def build_app(app)
+    app =
+      if app.respond_to?(:call)
+        [ *CONFIG_DEFAULTS[:app], app ]
+      else
+        app.dup
+      end
+    app.inject(app.pop) do |inner, outer|
+      outer.new(inner, self)
+    end
   end
 end
