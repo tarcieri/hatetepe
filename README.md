@@ -182,12 +182,14 @@ Hatetepe is subject to an MIT-style license (see LICENSE file).
 Roadmap
 -------
 
-- 0.5.0
-  - Direct IO via EM.enable_proxy
+- 0.6.0
+  - Direct recv<->send IO via EM.enable_proxy
+  - SSL/TLS
+  - HTTP proxying (in client and server)
+- later
   - Encoding support (ref. [github.com/tmm1/http_parser.rb#1](https://github.com/tmm1/http_parser.rb/pull/1))
   - Optimize for performance
   - Propagate connection errors to the app
-
 
 Ideas
 -----
