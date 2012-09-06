@@ -27,36 +27,35 @@ module Hatetepe
     def start
       require "hatetepe/server"
       require "rack"
-      
-      ENV["RACK_ENV"] = options[:env] || ENV["RACK_ENV"] || "development"
-      $stderr << "We're in #{ENV["RACK_ENV"]}\n"
-      $stderr.flush
-      
-      rackup = File.expand_path(options[:rackup] || "config.ru")
-      $stderr << "Booting from #{rackup}\n"
-      $stderr.flush
-      
-      app = Rack::Builder.parse_file(rackup)[0]
+
+      config          = config_for(options)
+      ENV["RACK_ENV"] = config[:env]
+
+      $stderr << "We're in #{config[:env]}\n"
+      $stderr << "Booting from #{config[:rackup]}\n"
 
       EM.epoll
       EM.synchrony do
+        $stderr << "Binding to #{config[:host]}:#{config[:port]}\n"
+
         trap("INT") { EM.stop }
         trap("TERM") { EM.stop }
-        
-        host    = options[:bind]    || "127.0.0.1"
-        port    = options[:port]    || 3000
-        timeout = options[:timeout] || Hatetepe::Server::CONFIG_DEFAULTS[:timeout]
-        
-        $stderr << "Binding to #{host}:#{port}\n"
-        $stderr.flush
-
-        Server.start({
-          app:     app,
-          host:    host,
-          port:    port,
-          timeout: timeout
-        })
+        Server.start(config)
       end
+    end
+
+    private
+
+    def config_for(options)
+      rackup = File.expand_path(options[:rackup] || "config.ru")
+      {
+        env:     options[:env]  || ENV["RACK_ENV"] || "development",
+        host:    options[:bind] || "127.0.0.1",
+        port:    options[:port] || 3000,
+        timeout: options[:timeout],
+        app:     Rack::Builder.parse_file(rackup)[0],
+        rackup:  rackup
+      }
     end
   end
 end

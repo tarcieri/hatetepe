@@ -35,7 +35,7 @@ describe Hatetepe::CLI do
       Hatetepe::Server.should_receive(:start) do |config|
         config[:host].should    == "127.0.0.1"
         config[:port].should    equal(3000)
-        config[:timeout].should == 5
+        config[:timeout].should be_nil
         
         config[:app].should    equal(rackup[0])
         ENV["RACK_ENV"].should == "development"
