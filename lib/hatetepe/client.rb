@@ -7,6 +7,13 @@ require "hatetepe/parser"
 require "hatetepe/request"
 require "hatetepe/version"
 
+module Hatetepe
+  HatetepeError = Class.new(StandardError)
+  RequestError  = Class.new(HatetepeError)
+  ClientError   = Class.new(RequestError)
+  ServerError   = Class.new(RequestError)
+end
+
 module Hatetepe::Client
   include Hatetepe::Connection
 
@@ -42,8 +49,6 @@ module Hatetepe::Client
   end
 
   # Initializes the parser, request queue, and middleware pipe.
-  #
-  # TODO: Use +Rack::Builder+ for building the app pipe. 
   #
   # @see EM::Connection#post_init
   #
@@ -136,6 +141,40 @@ module Hatetepe::Client
     request =  Hatetepe::Request.new(verb, URI(uri), headers, body)
     self    << request
     EM::Synchrony.sync(request)
+  end
+
+  # Like +#request+, but raises errors for 4xx and 5xx responses.
+  #
+  # @param [Symbol, String] verb
+  #   The HTTP method verb, e.g. +:get+ or +"PUT"+.
+  # @param [String, URI]    uri
+  #   The request URI.
+  # @param [Hash]           headers (optional)
+  #   The request headers.
+  # @param [#each]          body    (optional)
+  #   A request body object whose +#each+ method yields objects that respond
+  #   to +#to_s+.
+  #
+  # @return [Hatetepe]::Response, nil]
+  #
+  # @raise [Hatetepe::ClientError]
+  #   If the server responded with a 4xx status code.
+  # @raise [Hatetepe::ServerError]
+  #   If the server responded with a 5xx status code.
+  # @raise [Hatetepe::RequestError]
+  #   If the client failed to receive any response at all.
+  def request!(verb, uri, headers = {}, body = [])
+    response = request(verb, uri, headers, body)
+
+    if response.nil?
+      raise Hatetepe::RequestError
+    elsif response.status >= 500
+      raise Hatetepe::ServerError
+    elsif response.status >= 400
+      raise Hatetepe::ClientError
+    end
+
+    response
   end
 
   # Gracefully stops the client.

@@ -125,6 +125,47 @@ describe Hatetepe::Client do
     end
   end
 
+  describe "#request!" do
+    subject do
+      proc { client.request!(:get, "/") }
+    end
+
+    let(:status)   { 200 }
+    let(:response) { stub("response", :status => status) }
+
+    before do
+      client.stub(:request).with(:get, "/", {}, []) { response }
+    end
+
+    it "forwards to #request" do
+      subject.call.should eq(response)
+    end
+
+    describe "for a 4xx response" do
+      let(:status) { 404 }
+
+      it "raises a ClientError" do
+        subject.should raise_error(Hatetepe::ClientError)
+      end
+    end
+
+    describe "for a 5xx response" do
+      let(:status) { 502 }
+
+      it "raises a ServerError" do
+        subject.should raise_error(Hatetepe::ServerError)
+      end
+    end
+
+    describe "if no response could be received" do
+      let(:status) { 502 }
+
+      it "raises a ServerError" do
+        subject.should raise_error(Hatetepe::ServerError)
+      end
+    end
+  end
+
   describe "#<<" do
     let :request do
       Hatetepe::Request.new :head, "/test"
