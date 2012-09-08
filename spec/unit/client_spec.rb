@@ -158,10 +158,9 @@ describe Hatetepe::Client do
     end
 
     describe "if no response could be received" do
-      let(:status) { 502 }
-
       it "raises a ServerError" do
-        subject.should raise_error(Hatetepe::ServerError)
+        client.stub(:request) { nil }
+        subject.should raise_error(Hatetepe::RequestError)
       end
     end
   end
