@@ -46,6 +46,7 @@ module Hatetepe::Client
   # @api semipublic
   def initialize(config)
     @config = CONFIG_DEFAULTS.merge(config)
+    @ssl_handshake_completed = EM::DefaultDeferrable.new
   end
 
   # Initializes the parser, request queue, and middleware pipe.
@@ -65,6 +66,12 @@ module Hatetepe::Client
 
     self.comm_inactivity_timeout = config[:timeout]
     self.pending_connect_timeout = config[:connect_timeout]
+
+    start_tls if config[:ssl]
+  end
+
+  def ssl_handshake_completed
+    EM::Synchrony.next_tick { @ssl_handshake_completed.succeed }
   end
 
   # Feeds response data into the parser.
@@ -106,6 +113,8 @@ module Hatetepe::Client
   # @api public
   def <<(request)
     Fiber.new do
+      EM::Synchrony.sync(@ssl_handshake_completed) if config[:ssl]
+
       response = @app.call(request)
 
       if response && (request.verb == "HEAD" || response.status == 204)
