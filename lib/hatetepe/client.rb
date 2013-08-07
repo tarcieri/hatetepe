@@ -147,7 +147,10 @@ module Hatetepe::Client
   #
   # @api public
   def request(verb, uri, headers = {}, body = [])
-    request =  Hatetepe::Request.new(verb, URI(uri), headers, body)
+    uri = URI(uri)
+    headers['Host'] ||= "#{uri.host}:#{uri.port}"
+
+    request =  Hatetepe::Request.new(verb, uri.request_uri, headers, body)
     self    << request
     EM::Synchrony.sync(request)
   end
