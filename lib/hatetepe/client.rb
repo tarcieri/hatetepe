@@ -148,9 +148,13 @@ module Hatetepe::Client
   # @api public
   def request(verb, uri, headers = {}, body = [])
     uri = URI(uri)
+    uri.scheme ||= @config[:ssl] ? 'http' : 'https'
+    uri.host ||= @config[:host]
+    uri.port ||= @config[:port]
+
     headers['Host'] ||= "#{uri.host}:#{uri.port}"
 
-    request =  Hatetepe::Request.new(verb, uri.request_uri, headers, body)
+    request =  Hatetepe::Request.new(verb, URI(uri.to_s), headers, body)
     self    << request
     EM::Synchrony.sync(request)
   end
