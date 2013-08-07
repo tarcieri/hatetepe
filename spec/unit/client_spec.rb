@@ -84,11 +84,6 @@ describe Hatetepe::Client do
       client.should_receive(:request).with(:put, URI("/test"), headers, body)
       response.should equal(res)
     end
-
-    it "stops the client afterwards" do
-      client.should_receive(:stop)
-      response
-    end
   end
 
   describe "#request" do
@@ -192,7 +187,7 @@ describe Hatetepe::Client do
       let(:response) { nil }
 
       it "fails the request" do
-        request.should_receive(:fail).with(nil, client)
+        request.should_receive(:fail)
         client << request
       end
     end
