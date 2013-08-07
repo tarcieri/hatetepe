@@ -73,7 +73,7 @@ describe Hatetepe::Builder do
   describe "#chunked?"
 
   describe "#request(array)" do
-    let(:req) { [:get, "/foo", {"Key" => "value"}, stub("body")] }
+    let(:req) { [:get, "/foo", {"Key" => "value"}, double("body")] }
     
     before { builder.send :initialize }
     
@@ -137,7 +137,7 @@ describe Hatetepe::Builder do
   end
   
   describe "#response(array)" do
-    let(:res) { [201, {"Key" => "value"}, stub("body")] }
+    let(:res) { [201, {"Key" => "value"}, double("body")] }
     
     before { builder.send :initialize }
     
@@ -230,7 +230,7 @@ describe Hatetepe::Builder do
   end
   
   describe "#body(#each)" do
-    let(:body) { [stub("chunk#1"), stub("chunk#2")] }
+    let(:body) { [double("chunk#1"), double("chunk#2")] }
     
     it "calls #body_chunk for each element" do
       builder.should_receive(:body_chunk).with body[0]
@@ -318,7 +318,7 @@ describe Hatetepe::Builder do
       builder.complete
     end
     
-    let(:hook) { stub "hook", :call => nil }
+    let(:hook) { double "hook", :call => nil }
     
     it "calls the on_complete hooks" do
       builder.on_complete << hook
@@ -333,8 +333,8 @@ describe Hatetepe::Builder do
   end
   
   describe "#write(data)" do
-    let(:hook) { stub "hook" }
-    let(:data) { stub "data" }
+    let(:hook) { double "hook" }
+    let(:data) { double "data" }
     
     before { builder.send :initialize }
     
@@ -346,10 +346,10 @@ describe Hatetepe::Builder do
   end
   
   describe "#error(message)" do
-    let(:hook1) { stub "hook#1" }
-    let(:hook2) { stub "hook#2" }
+    let(:hook1) { double "hook#1" }
+    let(:hook2) { double "hook#2" }
     let(:message) { "error! error!" }
-    let(:exception) { stub "exception" }
+    let(:exception) { double "exception" }
     
     before do
       builder.send :initialize

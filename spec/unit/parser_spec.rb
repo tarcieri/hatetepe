@@ -68,7 +68,7 @@ describe Hatetepe::Parser do
   end
   
   let(:block) {
-    stub("block").tap {|blk|
+    double("block").tap {|blk|
       blk.stub :to_proc => proc {|*args| blk.call *args }
     }
   }

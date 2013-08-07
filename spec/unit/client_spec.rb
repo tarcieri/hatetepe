@@ -72,10 +72,10 @@ describe Hatetepe::Client do
   end
 
   describe ".request" do
-    let(:client)   { stub("client", request: res, stop: nil)  }
-    let(:headers)  { stub("headers") }
-    let(:body)     { stub("body") }
-    let(:res)      { stub("response") }
+    let(:client)   { double("client", request: res, stop: nil)  }
+    let(:headers)  { double("headers") }
+    let(:body)     { double("body") }
+    let(:res)      { double("response") }
     let(:response) { Hatetepe::Client.request(:put, "/test", headers, body) }
 
     before { Hatetepe::Client.stub(start: client) }
@@ -94,8 +94,8 @@ describe Hatetepe::Client do
   describe "#request" do
     let(:body)     { [ "Hello,", " world!" ]            }
     let(:headers)  { { "Content-Type" => "text/plain" } }
-    let(:request)  { stub("request")                    }
-    let(:response) { stub("response")                   }
+    let(:request)  { double("request")                    }
+    let(:response) { double("response")                   }
 
     before do
       client.stub(:<<)
@@ -131,7 +131,7 @@ describe Hatetepe::Client do
     end
 
     let(:status)   { 200 }
-    let(:response) { stub("response", :status => status) }
+    let(:response) { double("response", :status => status) }
 
     before do
       client.stub(:request).with(:get, "/", {}, []) { response }

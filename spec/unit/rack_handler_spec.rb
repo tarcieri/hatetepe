@@ -2,14 +2,14 @@ require "spec_helper"
 require "rack/handler/hatetepe"
 
 describe Rack::Handler::Hatetepe do
-  let(:app) { stub "app" }
+  let(:app) { double "app" }
   let(:options) {
     {
-      :Host => stub("host"),
-      :Port => stub("port")
+      :Host => double("host"),
+      :Port => double("port")
     }
   }
-  let(:server) { stub "server" }
+  let(:server) { double "server" }
   
   describe ".run(app, options) {|server| ... }" do
     before {

@@ -26,7 +26,7 @@ describe Hatetepe::Body do
   end
   
   context "#sync" do
-    let(:conn) { stub "conn", :paused? => true }
+    let(:conn) { double "conn", :paused? => true }
     
     it "resumes the source connection if any" do
       body.source = conn
@@ -43,7 +43,7 @@ describe Hatetepe::Body do
   end
   
   context "#length" do
-    let(:length) { stub "length" }
+    let(:length) { double "length" }
     
     it "forwards to io#length" do
       body.stub :sync
@@ -79,7 +79,7 @@ describe Hatetepe::Body do
   end
   
   context "#pos" do
-    let(:pos) { stub "pos" }
+    let(:pos) { double "pos" }
     
     it "forwards to io#pos" do
       body.io.stub :pos => pos
@@ -109,7 +109,7 @@ describe Hatetepe::Body do
   
   context "#closed_write?" do
     it "forwards to io#closed_write?" do
-      ret = stub("return")
+      ret = double("return")
       body.io.should_receive(:closed_write?) { ret }
       
       body.closed_write?.should equal(ret)
@@ -143,7 +143,7 @@ describe Hatetepe::Body do
     end
 
     describe "without a block" do
-      let(:enumerator) { stub }
+      let(:enumerator) { double }
 
       before { body.stub(:to_enum).with(:each) { enumerator } }
 
@@ -167,7 +167,7 @@ describe Hatetepe::Body do
     
     it "forwards to io#read" do
       body.succeed
-      args, ret = [stub("arg#1"), stub("arg#2")], stub("ret")
+      args, ret = [double("arg#1"), double("arg#2")], double("ret")
 
       body.io.should_receive(:read).with(*args) { ret }
       body.read(*args).should equal(ret)
@@ -187,7 +187,7 @@ describe Hatetepe::Body do
     
     it "forwards to io#gets" do
       body.succeed
-      ret = stub("ret")
+      ret = double("ret")
 
       body.io.should_receive(:gets) { ret }
       body.gets.should equal(ret)
@@ -196,7 +196,7 @@ describe Hatetepe::Body do
   
   context "#write(chunk)" do
     it "forwards to io#write" do
-      arg, ret = stub("arg"), stub("ret")
+      arg, ret = double("arg"), double("ret")
       body.io.should_receive(:write).with(arg) { ret }
       
       body.write(arg).should equal(ret)

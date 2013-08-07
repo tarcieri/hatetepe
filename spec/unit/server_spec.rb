@@ -39,7 +39,7 @@ describe Hatetepe::Server, "(public API)" do
     end
 
     let :app do
-      stub("app", :call => nil)
+      double("app", :call => nil)
     end
 
     let :http_request do
