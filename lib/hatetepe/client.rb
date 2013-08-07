@@ -122,7 +122,7 @@ module Hatetepe::Client
       end
 
       if !response
-        request.fail(nil, self)
+        request.fail
       elsif response.failure?
         request.fail(response)
       else
