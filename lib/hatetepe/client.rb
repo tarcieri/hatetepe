@@ -227,10 +227,8 @@ module Hatetepe::Client
   # @api public
   def self.request(verb, uri, headers = {}, body = [])
     uri    = URI(uri)
-    client = start(host: uri.host, port: uri.port)
+    client = start(host: uri.host, port: uri.port, ssl: uri.scheme == 'https')
     client.request(verb, uri, headers, body)
-  ensure
-    client.stop
   end
 
   # Feeds the request into the builder and blocks while waiting for the
